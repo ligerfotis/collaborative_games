@@ -123,7 +123,7 @@ class Game:
         
 
         # 10 - Win/Lose check
-        if pygame.time.get_ticks() >= 90000:
+        if pygame.time.get_ticks() >= 30000:
             self.running = 0
             self.exitcode = 1
         # # check if in top-left circle
@@ -131,7 +131,7 @@ class Game:
         #     self.running = 0
         #     self.exitcode = 1
         # check if in top-right circle
-        if self.width > self.playerpos[0] > self.width - (80 + 50) \
+        if self.width > self.playerpos[0] > self.width - (80 + 40) \
                 and self.playerpos[1] < (80 + 60 / 2 - 32):
             self.running = 0
             self.exitcode = 1
