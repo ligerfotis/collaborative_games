@@ -53,6 +53,7 @@ class Game:
                 return False
         return True
 
+
     def play(self, x_data):
         # 4 - keep looping through
         # while self.running:
@@ -115,12 +116,14 @@ class Game:
         # elif self.keys[3]:
         #     if self.playerpos[0] + move_rate < self.width - 64:
         #         self.playerpos[0] += move_rate
-        
-        self.playerpos[0] -= x_data/5
+        final_shift = x_data*2
+        print final_shift
+        if self.height - 64 > self.playerpos[0] + final_shift > 0:
+            self.playerpos[0] += final_shift
         
 
         # 10 - Win/Lose check
-        if pygame.time.get_ticks() >= 30000:
+        if pygame.time.get_ticks() >= 90000:
             self.running = 0
             self.exitcode = 1
         # # check if in top-left circle

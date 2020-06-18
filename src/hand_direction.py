@@ -3,12 +3,13 @@ import rospy
 from openpose_ros_msgs.msg import OpenPoseHumanList, OpenPoseHuman, PointWithProb
 import sys
 from std_msgs.msg import Int16
+from keypoint_3d_matching_msgs.msg import Keypoint3d_list
 
 class hand_direction:
 
     def __init__(self):
         self.direction_pub = rospy.Publisher('/RW_x_direction', Int16, queue_size = 10)
-        self.human_sub = rospy.Subscriber("/openpose_ros/human_list", OpenPoseHumanList, self.callback)
+        self.human_sub = rospy.Subscriber("/topic_transform", Keypoint3d_list, self.callback)
         self.current_x = None;
 
     def getDirection(self, point):
@@ -24,11 +25,12 @@ class hand_direction:
         return direction 
 
 
-    def callback(self, human_list):
+    def callback(self, human_list): # keypoint_3D list
    
 		# publish the coords of the right wrist
 		#self.direction_pub.publish(human_list.human_list[0].body_key_points_with_prob[4])
-		dir = self.getDirection(human_list.human_list[0].body_key_points_with_prob[4])
+		dir = self.getDirection(human_list.keypoints[0].points.point)
+		# dir = self.getDirection(human_list.human_list[0].body_key_points_with_prob[4])
 		self.direction_pub.publish(dir)
 
 
