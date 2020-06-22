@@ -86,8 +86,9 @@ class Game:
                 # if it is quit the game
                 pygame.quit()
                 exit(0)
-
+        print "y_data "+str(y_data)
         shift_y = y_data * move_rate
+        print "shift y:"+str(shift_y)
         if 0 < (self.playerpos[1] - shift_y) < (self.height - 64):
             self.playerpos[1] -= shift_y
 

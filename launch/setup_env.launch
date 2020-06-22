@@ -7,7 +7,10 @@
 	<node pkg="hand_direction" type="keypoint_to_action.py" respawn="false" name="keypoint_to_action" output="screen">
 	</node>
 
-	<node pkg="hand_direction" type="keypress.py" respawn="false" name="keypress" output="screen">
+<!-- 	<node pkg="hand_direction" type="keypress.py" respawn="false" name="Agent" output="screen">
+	</node> -->
+
+	<node pkg="hand_direction" type="ROS_Agent.py" respawn="false" name="Agent" output="screen">
 	</node>
 
 </launch>

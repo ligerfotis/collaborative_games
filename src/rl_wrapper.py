@@ -18,8 +18,8 @@ class controller:
 
 		self.reward_pub = rospy.Publisher('/rl/reward_game', reward_observation, queue_size = 10)
 
-		self.game.play(0,0)
 		self. play_next_lock = True
+		# self.game.play(0,0)
 
 		# r_0 = reward_observation()
 		# r_0.reward = 0
@@ -38,6 +38,12 @@ class controller:
 				self.game.play(action_human.action, 0)
 			else:
 				self.game.endGame()
+				
+			r_0 = reward_observation()
+			r_0.reward = self.game.getReward()
+			r_0.observations = self.game.getObservations()
+			r_0.final_state = self.game.finished
+			self.reward_pub.publish( r_0 )
 		self.play_next_lock = True
 
 
@@ -55,7 +61,7 @@ class controller:
 			r_0.observations = self.game.getObservations()
 			r_0.final_state = self.game.finished
 			self.reward_pub.publish( r_0 )
-		
+
 		self.play_next_lock = True
 
 
