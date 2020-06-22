@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <launch>
 
-	<node pkg="hand_direction" type="rl_wrapper.py" respawn="false" name="rl_wrapper" output="screen">
+	<node pkg="hand_direction" type="rl_wrapper.py" respawn="false" name="Environment" output="screen">
 	  </node>
 
-	<node pkg="hand_direction" type="keypoint_to_action.py" respawn="false" name="keypoint_to_action" output="screen">
+	<node pkg="hand_direction" type="keypoint_to_action.py" respawn="false" name="Human_Hand" output="screen">
 	</node>
 
 <!-- 	<node pkg="hand_direction" type="keypress.py" respawn="false" name="Agent" output="screen">

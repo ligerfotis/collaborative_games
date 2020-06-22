@@ -4,6 +4,7 @@ from hand_direction.msg import action_agent
 
 move_rate = 20
 
+TIME = 120000
 
 backgroundColor = (255, 255, 255)
 WHITE = (255, 255, 255)
@@ -72,8 +73,8 @@ class Game:
         # 6.4 - Draw clock
         font = pygame.font.Font(None, 24)
         survivedtext = font.render(
-            str((30000 - pygame.time.get_ticks()) / 60000) + ":" + str(
-                (30000 - pygame.time.get_ticks()) / 1000 % 60).zfill(2), True, (0, 0, 0))
+            str((TIME - pygame.time.get_ticks()) / 60000) + ":" + str(
+                (TIME - pygame.time.get_ticks()) / 1000 % 60).zfill(2), True, (0, 0, 0))
 
         self.screen.blit(survivedtext, (self.width / 2, 10))
 
@@ -86,9 +87,9 @@ class Game:
                 # if it is quit the game
                 pygame.quit()
                 exit(0)
-        print "y_data "+str(y_data)
+        # print "y_data "+str(y_data)
         shift_y = y_data * move_rate
-        print "shift y:"+str(shift_y)
+        # print "shift y:"+str(shift_y)
         if 0 < (self.playerpos[1] - shift_y) < (self.height - 64):
             self.playerpos[1] -= shift_y
 
@@ -98,7 +99,7 @@ class Game:
         
 
         # 10 - Win/Lose check
-        if pygame.time.get_ticks() >= 30000:
+        if pygame.time.get_ticks() >= TIME:
             self.running = 0
             self.exitcode = 1
             self.timedOut = True
