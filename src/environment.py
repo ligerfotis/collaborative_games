@@ -1,7 +1,8 @@
 import pygame
 from pygame.locals import *
+from hand_direction.msg import action_agent
 
-move_rate = 10
+move_rate = 20
 
 
 backgroundColor = (255, 255, 255)
@@ -35,6 +36,8 @@ class Game:
         self.player_width = 64
         self.rotation = 45
 
+        self.timedOut = self.finished = False
+
     def obstacle(self,):
         point_1a = (60 - 50, self.height-60 -50)
         point_2a = (self.width-60-50, 60-50)
@@ -54,9 +57,7 @@ class Game:
         return True
 
 
-    def play(self, x_data):
-        # 4 - keep looping through
-        # while self.running:
+    def play(self, x_data=0, y_data=0):
         # 5 - clear the screen before drawing it again
         self.screen.fill(backgroundColor)
         # 6 - draw the screen elements
@@ -85,47 +86,21 @@ class Game:
                 # if it is quit the game
                 pygame.quit()
                 exit(0)
-            if event.type == pygame.KEYDOWN:
-                if event.key == K_w:
-                    self.keys[0] = True
-                elif event.key == K_a:
-                    self.keys[1] = True
-                elif event.key == K_s:
-                    self.keys[2] = True
-                elif event.key == K_d:
-                    self.keys[3] = True
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_w:
-                    self.keys[0] = False
-                elif event.key == pygame.K_a:
-                    self.keys[1] = False
-                elif event.key == pygame.K_s:
-                    self.keys[2] = False
-                elif event.key == pygame.K_d:
-                    self.keys[3] = False
-        # 9 - Move player
-        if self.keys[0]:
-            if self.playerpos[1] - move_rate > 0:
-                self.playerpos[1] -= move_rate
-        elif self.keys[2]:
-            if self.playerpos[1] + move_rate < self.height - 64:
-                self.playerpos[1] += move_rate
-        # if self.keys[1]:
-        #     if self.playerpos[0] - move_rate > 0:
-        #         self.playerpos[0] -= move_rate
-        # elif self.keys[3]:
-        #     if self.playerpos[0] + move_rate < self.width - 64:
-        #         self.playerpos[0] += move_rate
-        final_shift = x_data*2
-        print final_shift
-        if self.height - 64 > self.playerpos[0] + final_shift > 0:
-            self.playerpos[0] += final_shift
+
+        shift_y = y_data * move_rate
+        if 0 < (self.playerpos[1] - shift_y) < (self.height - 64):
+            self.playerpos[1] -= shift_y
+
+        shift_x = x_data * 2
+        if self.height - 64 > self.playerpos[0] + shift_x > 0:
+            self.playerpos[0] += shift_x
         
 
         # 10 - Win/Lose check
         if pygame.time.get_ticks() >= 30000:
             self.running = 0
             self.exitcode = 1
+            self.timedOut = True
         # # check if in top-left circle
         # if self.playerpos[0] < (80 - 20) and self.playerpos[1] < (80 - 20):
         #     self.running = 0
@@ -135,6 +110,8 @@ class Game:
                 and self.playerpos[1] < (80 + 60 / 2 - 32):
             self.running = 0
             self.exitcode = 1
+            self.finished = True    # This means final state achieved
+
         # # check if in bottom-left circle
         # if self.playerpos[0] < (80 - 20) and self.playerpos[1] in range(self.height - (80 + 60), self.height):
         #     self.running = 0
@@ -144,12 +121,25 @@ class Game:
         #         self.height - (80 + 60 / 2), self.height):
         #     self.running = 0
         #     self.exitcode = 1
+    
+    def getReward(self):
+        if self.timedOut:
+            return -50
+        elif self.finished:
+            return 100
+        else:
+            return -1
+
+    def getObservations(self):
+        # [x position. y position, detected wrist x position]
+        # Size of observation space is 2
+        return [self.playerpos[0], self.playerpos[1]]
 
     def endGame(self):
         if self.exitcode == 1:
             pygame.font.init()
             font = pygame.font.Font(None, 64)
-            text = font.render("Reward: " + str(100), True, (0, 255, 0))
+            text = font.render("Finished!", True, (0, 255, 0))
             textRect = text.get_rect()
             textRect.centerx = self.screen.get_rect().centerx
             textRect.centery = self.screen.get_rect().centery + 24

@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+
+	<node pkg="hand_direction" type="rl_wrapper.py" respawn="false" name="rl_wrapper" output="screen">
+	  </node>
+
+	<node pkg="hand_direction" type="keypoint_to_action.py" respawn="false" name="keypoint_to_action" output="screen">
+	</node>
+
+	<node pkg="hand_direction" type="keypress.py" respawn="false" name="keypress" output="screen">
+	</node>
+
+</launch>
