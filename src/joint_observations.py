@@ -11,7 +11,6 @@ class Observations(object):
     def __init__(self):
         self.obs_robot_sub = message_filters.Subscriber("/rl/reward_observation_robot", reward_observation)
         self.obs_human_sub = message_filters.Subscriber("/rl/observation_human", observation)
-        self.reward_sub = rospy.Subscriber("/rl/reward", Int16)
 
 
         self.ts = message_filters.ApproximateTimeSynchronizer([self.obs_robot_sub, self.obs_human_sub], 1, 1)
