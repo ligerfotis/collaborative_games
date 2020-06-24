@@ -58,14 +58,14 @@ class Game:
         return True
 
 
-    def play(self, x_data=0, y_data=0):
+    def play(self, data=[0, 0]):
+        
+        x_data = int(data[0])
+        y_data = int(data[1])
         # 5 - clear the screen before drawing it again
         self.screen.fill(backgroundColor)
         # 6 - draw the screen elements
-        # pygame.draw.circle(self.screen, RED, (80, 80), 60)  # up-left
         pygame.draw.circle(self.screen, RED, (self.width - 80, 80), 60)  # up-right
-        # pygame.draw.circle(self.screen, RED, (80, self.height - 80), 60)  # down-left
-        # pygame.draw.circle(self.screen, RED, (self.width - 80, self.height - 80), 60)  # down-right
 
         self.obstacle()
 
@@ -87,9 +87,7 @@ class Game:
                 # if it is quit the game
                 pygame.quit()
                 exit(0)
-        # print "y_data "+str(y_data)
         shift_y = y_data * move_rate
-        # print "shift y:"+str(shift_y)
         if 0 < (self.playerpos[1] - shift_y) < (self.height - 64):
             self.playerpos[1] -= shift_y
 
@@ -97,32 +95,18 @@ class Game:
         if self.height - 64 > self.playerpos[0] + shift_x > 0:
             self.playerpos[0] += shift_x
         
-
         # 10 - Win/Lose check
         if pygame.time.get_ticks() >= TIME:
             self.running = 0
             self.exitcode = 1
             self.timedOut = True
-        # # check if in top-left circle
-        # if self.playerpos[0] < (80 - 20) and self.playerpos[1] < (80 - 20):
-        #     self.running = 0
-        #     self.exitcode = 1
-        # check if in top-right circle
+
         if self.width > self.playerpos[0] > self.width - (80 + 40) \
                 and self.playerpos[1] < (80 + 60 / 2 - 32):
             self.running = 0
             self.exitcode = 1
             self.finished = True    # This means final state achieved
 
-        # # check if in bottom-left circle
-        # if self.playerpos[0] < (80 - 20) and self.playerpos[1] in range(self.height - (80 + 60), self.height):
-        #     self.running = 0
-        #     self.exitcode = 1
-        # # check if in bottom-right circle
-        # if self.playerpos[0] in range(self.width - (80 + 60), self.width) and self.playerpos[1] in range(
-        #         self.height - (80 + 60 / 2), self.height):
-        #     self.running = 0
-        #     self.exitcode = 1
     
     def getReward(self):
         if self.timedOut:

@@ -2,14 +2,17 @@
 import rospy
 from std_msgs.msg import Int16
 from keypoint_3d_matching_msgs.msg import Keypoint3d_list
-from hand_direction.msg import reward_observation, action_human
+from hand_direction.msg import observation
+import numpy as np
+from std_msgs.msg import Float32
+import std_msgs
 
 class Converter:
 
 	def __init__(self):
 		print("init")
 		self.keypoint_sub = rospy.Subscriber("/topic_transform", Keypoint3d_list, self.callback)
-		self.action_pub = rospy.Publisher('/rl/action_human', action_human, queue_size = 10)
+		self.obs_human_pub = rospy.Publisher('/rl/observation_human', observation, queue_size = 10)
 		self.prev_x = None
 		self.speed = 1500
 		
@@ -32,11 +35,17 @@ class Converter:
 			return 0
 
 	def callback(self, data):
-			pos_x = data.keypoints[0].points.point.y # yes it is "y" because of the setup in lab
-			shift = self.getShift(self.normalize(pos_x))
-			act = action_human()
-			act.action = shift
-			self.action_pub.publish(act)
+		h = std_msgs.msg.Header()
+		h.stamp = rospy.Time.now() 
+
+		pos_x = data.keypoints[0].points.point.y # yes it is "y" because of the setup in lab
+		shift = self.getShift(self.normalize(pos_x))
+
+		obs = observation()
+		obs.observations = np.asarray([float(shift)])
+		obs.header = h
+
+		self.obs_human_pub.publish(obs)
 		
 
 if __name__ == '__main__':

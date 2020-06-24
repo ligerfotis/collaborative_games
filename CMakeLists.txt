@@ -18,8 +18,9 @@ find_package(/usr/local/lib/OpenPose/OpenPose REQUIRED)
 
 add_message_files(
   FILES
+  reward.msg
+  observation.msg
   reward_observation.msg
-  action_human.msg
   action_agent.msg
 )
 generate_messages(
