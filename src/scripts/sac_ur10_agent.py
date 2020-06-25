@@ -250,7 +250,7 @@ targets_reached = 0
 
 
 # Training loop
-for step in pbar:
+for step in self.pbar:
     try:
       with torch.no_grad():
         rospy.Subscriber("observations", observations, observation.get_state)

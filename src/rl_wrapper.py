@@ -33,7 +33,7 @@ class controller:
 		rew_obs.observations = self.game.getObservations()
 		rew_obs.final_state = self.game.finished
 		rew_obs.reward = self.game.getReward()
-
+		
 		self.obs_robot_pub.publish(rew_obs)
 
 	def play_next_agent(self, action_agent):

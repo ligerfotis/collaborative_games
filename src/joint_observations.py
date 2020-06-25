@@ -24,7 +24,6 @@ class Observations(object):
 
         # just concat the human's input on the state vector
         new_rew_obs.observations = np.concatenate([rew_obs_robot.observations,obs_human.observations],axis=None)
-        
         self.obs_pub.publish(new_rew_obs)
 
 
