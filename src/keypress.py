@@ -27,11 +27,11 @@ def readKeyboard():
 
 
 def talker():
-	pub = rospy.Publisher('/rl/action_agent', action_agent)
+	pub = rospy.Publisher('/rl/action', action_agent, queue_size =10)
 	rospy.init_node('keyboard')
 	while not rospy.is_shutdown():
 		act = action_agent()
-		act.action = keyboardPublisher()
+		act.action = [0.0, float(keyboardPublisher())]
 		pub.publish(act)
 
 if __name__ == '__main__':

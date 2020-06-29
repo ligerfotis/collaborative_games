@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+
+	<node pkg="hand_direction" type="rl_wrapper_human2human.py" respawn="false" name="Environment" output="screen">
+	  </node>
+
+
+	<node pkg="hand_direction" type="keypress_xy.py" respawn="false" name="human1" output="screen">
+	</node>
+
+	
+	<!-- <node pkg="hand_direction" type="joint_observations.py" respawn="false" name="observations" output="screen">
+		</node> -->
+<!-- 	<node pkg="hand_direction" type="ROS_Agent.py" respawn="false" name="Agent" output="screen">
+	</node> -->
+
+
+</launch>

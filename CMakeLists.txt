@@ -22,6 +22,7 @@ add_message_files(
   observation.msg
   reward_observation.msg
   action_agent.msg
+  action_human.msg
 )
 generate_messages(
    DEPENDENCIES
