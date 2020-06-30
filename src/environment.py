@@ -8,9 +8,11 @@ import time
 import pygame
 from pygame.locals import *
 from hand_direction.msg import action_agent
+import matplotlib.pyplot as plt
+import numpy as np
 
-move_rate_x = 5 * 1e-2
-move_rate_y = 5 * 1e-2
+accel_rate_x = 5 * 1e-2
+accel_rate_y = 5 * 1e-2
 
 
 backgroundColor = (255, 255, 255)
@@ -23,16 +25,15 @@ BLACK = (0, 0, 0)
 
 class Game:
     def __init__(self):
-        self.TIME = 60
+        self.TIME = 30
         self.start_time = time.time()
         self.time_elapsed = 0
         # 2 - Initialize the game
-        self.reset_time = 2  # seconds
         pygame.init()
         self.width, self.height = 800, 800
         self.screen = pygame.display.set_mode((self.width, self.height))
         self.keys = [False, False, False, False]
-        self.playerpos = [0, self.height - 64]
+        self.turtle_pos = [0, self.height - 64]
         self.reward = 0
         # 3 - Load images
         self.player = pygame.image.load("/home/liger/PycharmProjects/CollaborativeRL/resources/images/turtle.png")
@@ -46,9 +47,8 @@ class Game:
         self.thing_width = 400
         self.thing_height = 30
         self.player_width = 64
-        self.rotation = 45
 
-        self.shift_y = self.shift_x = 0
+        self.vel_y = self.vel_x = 0
 
         self.point_1a = (60 - 50, self.height - 60 - 50)
         self.point_2a = (self.width - 60 - 50, 60 - 50)
@@ -59,6 +59,15 @@ class Game:
 
         self.limit1 = self.width / 2
         self.limit2 = self.width / 2 - 100
+
+        self.accel_x_list = []
+        self.accel_y_list = []
+        self.vel_x_list = []
+        self.vel_y_list = []
+        self.time = []
+        self.count = 0
+        self.global_start_time = time.time()
+
         pygame.display.update()
 
     def obstacle(self):
@@ -77,11 +86,11 @@ class Game:
         pygame.draw.line(self.screen, BLACK, [self.limit1, self.height / 2], [self.width, self.height / 2])
 
     def checkCollision(self):
-        if self.playerpos[1] + 1 < self.thing_starty + self.thing_height:
+        if self.turtle_pos[1] + 1 < self.thing_starty + self.thing_height:
             print('y crossover')
 
-            if self.playerpos[0] > self.thing_startx and self.playerpos[1] < self.thing_startx + self.thing_width or \
-                    self.playerpos[1] + self.player_width > self.thing_startx and self.playerpos[0] \
+            if self.turtle_pos[0] > self.thing_startx and self.turtle_pos[1] < self.thing_startx + self.thing_width or \
+                    self.turtle_pos[1] + self.player_width > self.thing_startx and self.turtle_pos[0] \
                     + self.player_width < self.thing_startx + self.thing_width:
                 print('x crossover')
                 return False
@@ -100,7 +109,7 @@ class Game:
         pygame.draw.circle(self.screen, RED, (self.width - 80, 80), 60)  # up-right
 
         self.obstacle3()
-        self.screen.blit(self.player, self.playerpos)
+        self.screen.blit(self.player, self.turtle_pos)
         # 6.4 - Draw clock
         font = pygame.font.Font(None, 24)
         self.time_elapsed = int(floor(time.time() - self.start_time))
@@ -119,41 +128,51 @@ class Game:
                 pygame.quit()
                 exit(0)
 
-        self.shift_y += y_data * move_rate_y
-        self.shift_x += x_data * move_rate_x
+        self.accel_x = x_data * accel_rate_x
+        self.accel_y = y_data * accel_rate_y
+        
+        self.vel_x += self.accel_x
+        self.vel_y += self.accel_y
 
-        current_pos_x, current_pos_y = self.playerpos
-        next_pos_x = self.playerpos[0] + self.shift_x
-        next_pos_y = self.playerpos[1] - self.shift_y
+        current_pos_x, current_pos_y = self.turtle_pos
+        next_pos_x = self.turtle_pos[0] + self.vel_x
+        next_pos_y = self.turtle_pos[1] - self.vel_y
 
         # check collision on the x axis
         if 0 < next_pos_x < self.width - 64:
             if (self.height / 2) - 64 < current_pos_y < (self.height / 2) \
                     and (next_pos_x < self.limit2 - 34 or next_pos_x + 34 > self.limit1):
-                self.shift_x = 0
+                self.vel_x = 0
         else:
-            self.shift_x = 0
-        self.playerpos[0] += self.shift_x
+            self.vel_x = 0
+        self.turtle_pos[0] += self.vel_x
 
         if 0 < next_pos_y < self.height - 64:
-            if 0 < self.playerpos[0] < self.limit2 - 34 or self.limit1-34 < self.playerpos[0] < self.width:
+            if 0 < self.turtle_pos[0] < self.limit2 - 34 or self.limit1-34 < self.turtle_pos[0] < self.width:
                 if self.height / 2 - 64 <= next_pos_y <= self.height / 2:
-                    self.shift_y = 0
+                    self.vel_y = 0
         else:
-            self.shift_y = 0
-        self.playerpos[1] -= self.shift_y
+            self.vel_y = 0
+        self.turtle_pos[1] -= self.vel_y
 
+        self.accel_x_list.append(self.accel_x)
+        self.accel_y_list.append(self.accel_y)
 
+       
+        self.vel_x_list.append(self.vel_x)
+        self.vel_y_list.append(self.vel_y)
 
-        # print([self.shift_x, self.shift_y])
+        self.time.append((time.time() - self.global_start_time) * 1e3 )
+        
+        # print([self.vel_x, self.vel_y])
         # 10 - Win/Lose check
         if self.time_elapsed >= self.TIME:
             self.running = 0
             self.exitcode = 1
             self.timedOut = True
 
-        if self.width > self.playerpos[0] > self.width - (80 + 40) \
-                and self.playerpos[1] < (80 + 60 / 2 - 32):
+        if self.width > self.turtle_pos[0] > self.width - (80 + 40) \
+                and self.turtle_pos[1] < (80 + 60 / 2 - 32):
             self.running = 0
             self.exitcode = 1
             self.finished = True  # This means final state achieved
@@ -165,7 +184,7 @@ class Game:
             return -50
         elif self.finished:
             return 100
-        # elif not (700 - 64 < self.playerpos[0] + self.playerpos[1] < 900 - 64):
+        # elif not (700 - 64 < self.turtle_pos[0] + self.turtle_pos[1] < 900 - 64):
         #     return -10
         else:
             return -1
@@ -173,7 +192,7 @@ class Game:
     def getObservations(self):
         # [x position. y position, detected wrist x position]
         # Size of observation space is 2
-        return [self.playerpos[0], self.playerpos[1]]
+        return [self.turtle_pos[0], self.turtle_pos[1]]
 
     def endGame(self):
         if self.exitcode == 1:
@@ -190,15 +209,20 @@ class Game:
         time.sleep(1)
         pygame.display.quit()
         pygame.quit()
-        # time.sleep(self.reset_time)
 
-        # while 1:
-        #     for event in pygame.event.get():
-        #         if event.type == pygame.QUIT:
-        #             pygame.quit()
-        #     pygame.display.flip()
+        self.plot(self.time, self.accel_x_list, "accelaration x-axis", 'accelaration x-axis','Running time since Game started(msec)')
+        self.plot(self.time, self.accel_y_list, "accelaration x-axis", 'accelaration x-axis','Running time since Game started(msec)')
+        self.plot(self.time, self.vel_x_list, "accelaration x-axis", 'accelaration x-axis','Running time since Game started(msec)')
+        self.plot(self.time, self.vel_y_list, "accelaration x-axis", 'accelaration x-axis','Running time since Game started(msec)')
 
-    def reset(self):
-        self.__init__()
+    def plot(self, time_elpsd, list, figure_title, y_axis_name, x_axis_name):       
+        plt.figure(figure_title)
+        plt.grid()
+        plt.xticks(np.arange(0, time_elpsd[-1], step=300))
+        # plt.yticks(np.arange(min(list), max(list), step=0.01))
+        plt.plot(time_elpsd, list)
+        plt.ylabel(y_axis_name)
+        plt.xlabel(x_axis_name)
+        plt.show()
 
 
