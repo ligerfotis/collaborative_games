@@ -67,6 +67,8 @@ class Game:
         self.time = []
         self.count = 0
         self.global_start_time = time.time()
+        self.turtle_real_x_pos_list = []
+        self.turtle_real_y_pos_list = []
 
         pygame.display.update()
 
@@ -109,7 +111,9 @@ class Game:
         pygame.draw.circle(self.screen, RED, (self.width - 80, 80), 60)  # up-right
 
         self.obstacle3()
-        self.screen.blit(self.player, self.turtle_pos)
+        turtle = self.screen.blit(self.player, self.turtle_pos)
+        self.turtle_real_x_pos_list.append(turtle[0])
+        self.turtle_real_y_pos_list.append(turtle[1])
         # 6.4 - Draw clock
         font = pygame.font.Font(None, 24)
         self.time_elapsed = int(floor(time.time() - self.start_time))
@@ -214,6 +218,8 @@ class Game:
         self.plot(self.time, self.accel_y_list, "accelaration x-axis", 'accelaration x-axis','Running time since Game started(msec)')
         self.plot(self.time, self.vel_x_list, "accelaration x-axis", 'accelaration x-axis','Running time since Game started(msec)')
         self.plot(self.time, self.vel_y_list, "accelaration x-axis", 'accelaration x-axis','Running time since Game started(msec)')
+        self.turtle_real_y_pos_list.reverse()
+        self.plot(self.turtle_real_x_pos_list, self.turtle_real_y_pos_list, "turtle_pos", 'y-position','x-position')
 
     def plot(self, time_elpsd, list, figure_title, y_axis_name, x_axis_name):       
         plt.figure(figure_title)
