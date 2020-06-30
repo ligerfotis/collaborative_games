@@ -4,13 +4,13 @@ from __future__ import print_function
 import time
 import timeit
 from math import floor
-
+import time
 import pygame
 from pygame.locals import *
 from hand_direction.msg import action_agent
 
-move_rate_x = 1*1e-3
-move_rate_y = 1*1e-3
+move_rate_x = 5 * 1e-2
+move_rate_y = 5 * 1e-2
 
 
 backgroundColor = (255, 255, 255)
@@ -89,6 +89,7 @@ class Game:
 
 
     def play(self, data=None):
+        start_time = time.time()
         if data is None:
             data = [0, 0]
         x_data = int(data[0])
@@ -143,6 +144,7 @@ class Game:
         self.playerpos[1] -= self.shift_y
 
 
+
         # print([self.shift_x, self.shift_y])
         # 10 - Win/Lose check
         if self.time_elapsed >= self.TIME:
@@ -155,6 +157,8 @@ class Game:
             self.running = 0
             self.exitcode = 1
             self.finished = True  # This means final state achieved
+
+        return time.time() - start_time
 
     def getReward(self):
         if self.timedOut:

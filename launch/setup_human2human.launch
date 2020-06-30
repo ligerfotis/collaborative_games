@@ -5,7 +5,7 @@
 	  </node>
 
 
-	<node pkg="hand_direction" type="keypress_xy.py" respawn="false" name="human1" output="screen">
+	<node pkg="hand_direction" type="keypress_xy.py" respawn="false" name="human" output="screen">
 	</node>
 
 	
