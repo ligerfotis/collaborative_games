@@ -34,17 +34,17 @@ class controller:
 		self.transmit_time_list.append(rospy.get_rostime().to_sec()- act.header.stamp.to_sec())
 
 
-	def play_next_agent(self):
-		# print self.action_human
+
+	def game_loop(self):
 		total_time = []
+		# print self.action_human
 		while self.game.running:
 			exec_time = self.game.play([self.action_human1, self.action_human2])
-			
 			total_time.append(exec_time)
-
-		print("Average Execution time for play funtion is %f milliseconds. \n" % ( mean(total_time)*1e3 ))			
+			
 		self.game.endGame()
 
+		print("Average Execution time for play funtion is %f milliseconds. \n" % ( mean(total_time)*1e3 ))			
 		print("Average time from publishing to receiveing is %f milliseconds. \n" % (mean(self.transmit_time_list)* 1e3))
 
 
@@ -52,9 +52,9 @@ class controller:
 if __name__ == '__main__':
 	rospy.init_node('rl_wrapper', anonymous=True)
 	ctrl = controller()
-	ctrl.game.play([0, 0])
+	ctrl.game.game_intro()
 
-	ctrl.play_next_agent()
+	ctrl.game_loop()
 	# while ctrl.game.running:
 	try:
 		rospy.spin()

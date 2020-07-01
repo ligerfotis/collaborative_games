@@ -11,8 +11,8 @@ from hand_direction.msg import action_agent
 import matplotlib.pyplot as plt
 import numpy as np
 
-accel_rate_x = 5 * 1e-2
-accel_rate_y = 5 * 1e-2
+accel_rate_x = 1 * 1e-1
+accel_rate_y = 1 * 1e-1
 
 
 backgroundColor = (255, 255, 255)
@@ -21,7 +21,20 @@ BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 BLACK = (0, 0, 0)
+bright_red = (255, 0, 0)
+bright_green = (0, 255, 0)
 
+
+
+def text_objects(text, font):
+    textSurface = font.render(text, True, BLACK)
+    return textSurface, textSurface.get_rect()
+
+
+def quit_game():
+    pygame.display.quit()
+    pygame.quit()
+    exit(0)
 
 class Game:
     def __init__(self):
@@ -70,6 +83,10 @@ class Game:
         self.turtle_real_x_pos_list = []
         self.turtle_real_y_pos_list = []
 
+        self.clock = pygame.time.Clock()
+
+        self.intro = True
+
         pygame.display.update()
 
     def obstacle(self):
@@ -77,27 +94,63 @@ class Game:
         pygame.draw.line(self.screen, BLACK, self.point_1a, self.point_2a)
         pygame.draw.line(self.screen, BLACK, self.point_1b, self.point_2b)
 
+
     def obstacle2(self):
 
         pygame.draw.line(self.screen, BLACK, [0, 0], [self.limit1, self.limit1])
         pygame.draw.line(self.screen, BLACK, [self.limit2, self.limit2], [self.width,self.height])
+
 
     def obstacle3(self):
 
         pygame.draw.line(self.screen, BLACK, [0, self.height / 2], [self.limit2, self.height / 2])
         pygame.draw.line(self.screen, BLACK, [self.limit1, self.height / 2], [self.width, self.height / 2])
 
-    def checkCollision(self):
-        if self.turtle_pos[1] + 1 < self.thing_starty + self.thing_height:
-            print('y crossover')
 
-            if self.turtle_pos[0] > self.thing_startx and self.turtle_pos[1] < self.thing_startx + self.thing_width or \
-                    self.turtle_pos[1] + self.player_width > self.thing_startx and self.turtle_pos[0] \
-                    + self.player_width < self.thing_startx + self.thing_width:
-                print('x crossover')
-                return False
-        return True
+    def button(self, msg, x, y, w, h, ic, ac, action=None):
+        mouse = pygame.mouse.get_pos()
+        click = pygame.mouse.get_pressed()
+        # print(click)
+        if x + w > mouse[0] > x and y + h > mouse[1] > y:
+            pygame.draw.rect(self.screen, ac, (x, y, w, h))
+            if click[0] == 1 and action is not None:
+                if action == "play":
+                    self.intro = False
+                elif action == "quit":
+                    quit_game()
+        else:
+            pygame.draw.rect(self.screen, ic, (x, y, w, h))
 
+        pygame.font.init()
+        smallText = pygame.font.SysFont("comicsansms", 20)
+        textSurf, textRect = text_objects(msg, smallText)
+        textRect.center = ((x + (w / 2)), (y + (h / 2)))
+        self.screen.blit(textSurf, textRect)
+
+
+    def game_intro(self):
+        while self.intro:
+            for event in pygame.event.get():
+                # print(event)
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    quit()
+
+            self.screen.fill(WHITE)
+            pygame.font.init()
+            largeText = pygame.font.Font(None, 115)
+            TextSurf, TextRect = text_objects("Turtle Collab", largeText)
+            TextRect.center = ((self.width / 2), (self.height / 2))
+            self.screen.blit(TextSurf, TextRect)
+
+            try:
+                self.button("GO!", 150, 450, 100, 50, GREEN, bright_green, "play")
+                self.button("Quit", 550, 450, 100, 50, RED, bright_red, "quit")
+            except pygame.error:
+                print("An exception occurred")
+
+            pygame.display.update()
+            self.clock.tick(15)
 
     def play(self, data=None):
         start_time = time.time()
@@ -214,21 +267,29 @@ class Game:
         pygame.display.quit()
         pygame.quit()
 
-        self.plot(self.time, self.accel_x_list, "accelaration x-axis", 'accelaration x-axis','Running time since Game started(msec)')
-        self.plot(self.time, self.accel_y_list, "accelaration x-axis", 'accelaration x-axis','Running time since Game started(msec)')
-        self.plot(self.time, self.vel_x_list, "accelaration x-axis", 'accelaration x-axis','Running time since Game started(msec)')
-        self.plot(self.time, self.vel_y_list, "accelaration x-axis", 'accelaration x-axis','Running time since Game started(msec)')
+        self.plot(self.time, self.accel_x_list, "accelaration_x_axis", 'accelaration x-axis','Running time since Game started(msec)', save=True)
+        self.plot(self.time, self.accel_y_list, "accelaration_y_axis", 'accelaration x-axis','Running time since Game started(msec)', save=True)
+        self.plot(self.time, self.vel_x_list, "velocity_x_axis", 'accelaration x-axis','Running time since Game started(msec)', save=True)
+        self.plot(self.time, self.vel_y_list, "velocity_y_axis", 'accelaration x-axis','Running time since Game started(msec)', save=True)
         self.turtle_real_y_pos_list.reverse()
         self.plot(self.turtle_real_x_pos_list, self.turtle_real_y_pos_list, "turtle_pos", 'y-position','x-position')
 
-    def plot(self, time_elpsd, list, figure_title, y_axis_name, x_axis_name):       
+    # def game_loop(self):
+    #     while self.running:
+    #         self.play()
+    #     self.endGame()
+
+    def plot(self, time_elpsd, list, figure_title, y_axis_name, x_axis_name, save=True):       
         plt.figure(figure_title)
         plt.grid()
-        plt.xticks(np.arange(0, time_elpsd[-1], step=300))
+        # plt.xticks(np.arange(0, time_elpsd[-1], step=500))
         # plt.yticks(np.arange(min(list), max(list), step=0.01))
         plt.plot(time_elpsd, list)
         plt.ylabel(y_axis_name)
         plt.xlabel(x_axis_name)
-        plt.show()
+        if save:
+            plt.savefig("/home/liger/catkin_ws/src/hand_direction/" + figure_title)
+        else:
+            plt.show()
 
 

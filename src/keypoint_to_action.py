@@ -2,7 +2,7 @@
 import rospy
 from std_msgs.msg import Int16
 from keypoint_3d_matching_msgs.msg import Keypoint3d_list
-from hand_direction.msg import observation
+from hand_direction.msg import action_msg
 import numpy as np
 from std_msgs.msg import Float32
 import std_msgs
@@ -12,9 +12,9 @@ class Converter:
 	def __init__(self):
 		print("init")
 		self.keypoint_sub = rospy.Subscriber("/topic_transform", Keypoint3d_list, self.callback)
-		self.obs_human_pub = rospy.Publisher('/rl/observation_human', observation, queue_size = 10)
+		self.action_human_pub = rospy.Publisher('/rl/hand_action_x', action_msg, queue_size = 10)
 		self.prev_x = None
-		self.speed = 1500
+		# self.speed = 1500
 		
 
 	def getShift(self, pos_x):
@@ -26,7 +26,11 @@ class Converter:
 			if abs(shift) < 0.004:
 				return 0
 			else:
-				return shift * self.speed 
+				# return shift * self.speed
+				if shift < 0:
+					return -1
+				else:
+					return 1
 
 	def normalize(self, x_data):
 		if  0 < x_data < 0.35:
@@ -40,12 +44,12 @@ class Converter:
 
 		pos_x = data.keypoints[0].points.point.y # yes it is "y" because of the setup in lab
 		shift = self.getShift(self.normalize(pos_x))
-
-		obs = observation()
-		obs.observations = np.asarray([float(shift)])
-		obs.header = h
 		
-		self.obs_human_pub.publish(obs)
+		act = action_msg()
+		act.action = np.asarray([float(shift)])
+		act.header = h
+		
+		self.action_human_pub.publish(act)
 		
 
 if __name__ == '__main__':

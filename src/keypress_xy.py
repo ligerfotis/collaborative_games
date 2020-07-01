@@ -2,7 +2,7 @@
 import rospy
 from std_msgs.msg import Float32
 # from getch import getch, pause
-from hand_direction.msg import observation, action_agent, reward_observation, action_human
+from hand_direction.msg import observation, action_agent, reward_observation, action_human, action_msg
 import std_msgs
 import sys, os, termios, fcntl
 import time
@@ -82,8 +82,8 @@ class KeyboardPublisher:
 		h = std_msgs.msg.Header()
 		
 
-		pub_y = rospy.Publisher('/rl/action_y', action_human, queue_size =10)
-		pub_x = rospy.Publisher('/rl/action_x', action_human, queue_size =10)
+		pub_y = rospy.Publisher('/rl/action_y', action_msg, queue_size =10)
+		pub_x = rospy.Publisher('/rl/action_x', action_msg, queue_size =10)
 
 		act = action_human()
 

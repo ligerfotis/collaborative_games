@@ -23,6 +23,7 @@ add_message_files(
   reward_observation.msg
   action_agent.msg
   action_human.msg
+  action_msg.msg
 )
 generate_messages(
    DEPENDENCIES

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import rospy
-from hand_direction.msg import observation, action_agent, reward_observation
+from hand_direction.msg import action_msg, action_agent, reward_observation
 from getch import getch, pause
 import numpy as np
 import message_filters
@@ -9,22 +9,22 @@ from hand_direction.msg import observation
 
 class Observations(object):
     def __init__(self):
-        self.obs_robot_sub = message_filters.Subscriber("/rl/reward_observation_robot", reward_observation)
-        self.obs_human_sub = message_filters.Subscriber("/rl/observation_human", observation)
+        self.obs_robot_sub = message_filters.Subscriber("/rl/reward_and_observation_game", reward_observation)
+        self.act_human_sub = message_filters.Subscriber("/rl/hand_action_x", action_msg)
 
 
-        self.ts = message_filters.ApproximateTimeSynchronizer([self.obs_robot_sub, self.obs_human_sub], 1, 1)
+        self.ts = message_filters.ApproximateTimeSynchronizer([self.obs_robot_sub, self.act_human_sub], 1, 1)
         self.ts.registerCallback(self.publish_full_observation_reward)
 
-        self.obs_pub = rospy.Publisher("/rl/observation_reward", reward_observation, queue_size=10)
+        self.obs_pub = rospy.Publisher("/rl/environment_response", reward_observation, queue_size=10)
 
 
-    def publish_full_observation_reward(self, rew_obs_robot, obs_human):
-        new_rew_obs = rew_obs_robot
+    def publish_full_observation_reward(self, obs_game, act_human):
+        new_obs = obs_game
 
         # just concat the human's input on the state vector
-        new_rew_obs.observations = np.concatenate([rew_obs_robot.observations,obs_human.observations],axis=None)
-        self.obs_pub.publish(new_rew_obs)
+        new_obs.observations = np.concatenate([new_obs.observations,act_human.action],axis=None)
+        self.obs_pub.publish(new_obs)
 
 
 if __name__ == '__main__':
