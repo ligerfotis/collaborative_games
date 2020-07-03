@@ -15,6 +15,11 @@ import numpy as np
 from torch import optim
 import pickle
 import time 
+import rospkg
+
+resume = False
+rospack = rospkg.RosPack()
+package_path = rospack.get_path("hand_direction")
 
 def next_action_random():
     rand = np.random.randint(low=1, high=11)
@@ -69,6 +74,26 @@ class SAC:
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=LEARNING_RATE)
         self.lr = None
 
+        if resume:
+            if os.path.isfile(package_path+"/src/scripts/checkpoints_human/agent.pth"):
+                print("\nResuming training\n")
+                checkpoint = torch.load(package_path+"/src/scripts/checkpoints_human/agent.pth")
+                self.actor.load_state_dict(checkpoint['actor_state_dict'])
+                self.critic_1.load_state_dict(checkpoint['critic_1_state_dict'])
+                self.critic_2.load_state_dict(checkpoint['critic_2_state_dict'])
+                self.value_critic.load_state_dict(checkpoint['value_critic_state_dict'])
+                UPDATE_START = 1
+                print(UPDATE_START)
+
+                self.target_value_critic.load_state_dict(checkpoint['target_value_critic_state_dict'])
+                self.actor_optimiser.load_state_dict(checkpoint['actor_optimiser_state_dict'])
+                self.critics_optimiser.load_state_dict(checkpoint['critics_optimiser_state_dict'])
+                self.value_critic_optimiser.load_state_dict(checkpoint['value_critic_optimiser_state_dict'])
+                self.alpha_optimizer.load_state_dict(checkpoint['alpha_optimizer_state_dict'])
+                self.D = pickle.load( open( package_path+"/src/scripts/checkpoints_human/agent.p", "rb" ) )
+            else:
+                print("No checkpoint found at '{}'".format(package_path+"/src/scripts/checkpoints_human/agent.pth"))
+
     def update_rw_state(self, state, reward, action, next_state, final_state):
         state = torch.tensor(state, dtype=torch.float32).to(self.device)
         next_state = torch.tensor(next_state).to(self.device)
@@ -83,7 +108,7 @@ class SAC:
         try:
             with torch.no_grad():
                 state = torch.tensor(state, dtype=torch.float32).to(self.device)
-                if len(self.D) < UPDATE_START:
+                if len(self.D) < UPDATE_START and resume:
                     # To improve exploration take actions sampled
                     # from a uniform random distribution over actions at the start of training
                     # act = self.next_action_random()
@@ -168,7 +193,7 @@ class SAC:
                     'actor_optimiser_state_dict': self.actor_optimiser.state_dict(),
                     'critics_optimiser_state_dict': self.critics_optimiser.state_dict(),
                     'alpha_optimizer_state_dict': self.alpha_optimizer.state_dict(),
-                }, "/home/liger/PycharmProjects/CollaborativeRL/scripts/checkpoints_human/agent.pth")
+                }, "/home/liger/catkin_ws/src/hand_direction/src/scripts/checkpoints_human/agent.pth")
                 print("Saving replay buffer")
                 # pickle.dump(self.D, open("/scripts/checkpoints_human/agent.p", "wb"))
 

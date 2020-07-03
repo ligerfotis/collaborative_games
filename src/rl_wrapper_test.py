@@ -38,12 +38,13 @@ class controller:
 		avg_rewards = []
 		lr_list = []
 		turn_list = []
-
+		global_time = rospy.get_rostime().to_sec()
 		for exp in range(MAX_STEPS):
 			print("Experiment %d" % (exp + 1))
 			total_rewards = []
 			turns = 0
 			while self.game.running:
+				self.game.experiment = exp
 				turns += 1
 				start_time = time.time()
 				state = self.game.getState()
@@ -83,6 +84,8 @@ class controller:
 
 		print("Average Execution time for play funtion is %f milliseconds. \n" % (mean(total_time) * 1e3))
 
+		print("Total time of experiments is: %d minutes and %d seconds.\n" % ( ( rospy.get_rostime().to_sec() - global_time )/60, ( rospy.get_rostime().to_sec() - global_time )%60 )  )
+		
 		self.game.endGame()
 
 

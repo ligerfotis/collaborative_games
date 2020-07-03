@@ -10,6 +10,7 @@ from pygame.locals import *
 from hand_direction.msg import action_agent
 import matplotlib.pyplot as plt
 import numpy as np
+from hyperparams_ur10 import MAX_STEPS
 
 accel_rate_x = 1 * 1e-1
 accel_rate_y = 1
@@ -38,6 +39,7 @@ def quit_game():
 
 class Game:
     def __init__(self):
+        self.experiment = 0
         self.TIME = 30
         self.start_time = None
         self.time_elapsed = 0
@@ -122,6 +124,9 @@ class Game:
                     self.intro = False
                 elif action == "quit":
                     quit_game()
+                elif action == "reset":
+                    self.turtle_pos = [5, self.height - 64]
+
         else:
             pygame.draw.rect(self.screen, ic, (x, y, w, h))
 
@@ -184,6 +189,15 @@ class Game:
                 str(self.time_elapsed), True, (0, 0, 0))
 
         self.screen.blit(survivedtext, (self.width / 2, 10))
+
+        game_num_text = font.render("Game: " + str(self.experiment) + "/" + str(MAX_STEPS), True, (0, 0, 0))
+
+        self.screen.blit(game_num_text, (90, 10))
+
+        try:
+            self.button("reset", 2, 2, 80, 40, BLUE, bright_green, "reset")
+        except pygame.error:
+            print("An exception occurred")
 
         # 7 - update the screen
         pygame.display.flip()
@@ -289,17 +303,17 @@ class Game:
     #         self.play()
     #     self.endGame()
 
-    def plot(self, time_elpsd, list, figure_title, y_axis_name, x_axis_name, save=True):       
-        plt.figure(figure_title)
-        plt.grid()
-        # plt.xticks(np.arange(0, time_elpsd[-1], step=500))
-        # plt.yticks(np.arange(min(list), max(list), step=0.01))
-        plt.plot(time_elpsd, list)
-        plt.ylabel(y_axis_name)
-        plt.xlabel(x_axis_name)
-        if save:
-            plt.savefig("/home/liger/catkin_ws/src/hand_direction/" + figure_title)
-        else:
-            plt.show()
+    # def plot(self, time_elpsd, list, figure_title, y_axis_name, x_axis_name, save=True):       
+    #     plt.figure(figure_title)
+    #     plt.grid()
+    #     # plt.xticks(np.arange(0, time_elpsd[-1], step=500))
+    #     # plt.yticks(np.arange(min(list), max(list), step=0.01))
+    #     plt.plot(time_elpsd, list)
+    #     plt.ylabel(y_axis_name)
+    #     plt.xlabel(x_axis_name)
+    #     if save:
+    #         plt.savefig("/home/liger/catkin_ws/src/hand_direction/" + figure_title)
+    #     else:
+    #         plt.show()
 
 
