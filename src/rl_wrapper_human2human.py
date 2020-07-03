@@ -13,6 +13,7 @@ class controller:
 
 	def __init__(self):
 		print("init")
+		self.experiments_num = 10
 		# self.human_sub = rospy.Subscriber("/RW_x_direction", Int16, self.simulate)
 		self.game = Game()
 		self.action_human1 = 0.0
@@ -38,10 +39,16 @@ class controller:
 	def game_loop(self):
 		total_time = []
 		# print self.action_human
-		while self.game.running:
-			exec_time = self.game.play([self.action_human1, self.action_human2])
-			total_time.append(exec_time)
-			
+		for exp in range(self.experiments_num):
+			print("Experiment %d" % exp)
+			while self.game.running:
+				exec_time = self.game.play([self.action_human1, self.action_human2])
+				total_time.append(exec_time)
+				
+			# reset game
+			self.game = Game()
+			self.game.start_time = time.time()
+
 		self.game.endGame()
 
 		print("Average Execution time for play funtion is %f milliseconds. \n" % ( mean(total_time)*1e3 ))			

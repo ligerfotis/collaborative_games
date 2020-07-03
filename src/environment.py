@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 accel_rate_x = 1 * 1e-1
-accel_rate_y = 1 * 1e-1
+accel_rate_y = 1
 
 
 backgroundColor = (255, 255, 255)
@@ -39,14 +39,14 @@ def quit_game():
 class Game:
     def __init__(self):
         self.TIME = 30
-        self.start_time = time.time()
+        self.start_time = None
         self.time_elapsed = 0
         # 2 - Initialize the game
         pygame.init()
         self.width, self.height = 800, 800
         self.screen = pygame.display.set_mode((self.width, self.height))
         self.keys = [False, False, False, False]
-        self.turtle_pos = [0, self.height - 64]
+        self.turtle_pos = [5, self.height - 64]
         self.reward = 0
         # 3 - Load images
         self.player = pygame.image.load("/home/liger/PycharmProjects/CollaborativeRL/resources/images/turtle.png")
@@ -83,7 +83,10 @@ class Game:
         self.turtle_real_x_pos_list = []
         self.turtle_real_y_pos_list = []
 
+        self.accel_x, self.accel_y, self.vel_x, self.vel_y = [0, 0, 0, 0]
+
         self.clock = pygame.time.Clock()
+        self.time_dependend = False
 
         self.intro = True
 
@@ -115,6 +118,7 @@ class Game:
             pygame.draw.rect(self.screen, ac, (x, y, w, h))
             if click[0] == 1 and action is not None:
                 if action == "play":
+                    self.start_time = time.time()
                     self.intro = False
                 elif action == "quit":
                     quit_game()
@@ -156,8 +160,10 @@ class Game:
         start_time = time.time()
         if data is None:
             data = [0, 0]
-        x_data = int(data[0])
-        y_data = int(data[1])
+
+        x_data = data[0]
+        y_data = data[1]
+
         # 5 - clear the screen before drawing it again
         self.screen.fill(backgroundColor)
         # 6 - draw the screen elements
@@ -170,8 +176,12 @@ class Game:
         # 6.4 - Draw clock
         font = pygame.font.Font(None, 24)
         self.time_elapsed = int(floor(time.time() - self.start_time))
-        survivedtext = font.render(
-            str(self.TIME - self.time_elapsed), True, (0, 0, 0))
+        if self.time_dependend:
+            survivedtext = font.render(
+                str(self.TIME - self.time_elapsed), True, (0, 0, 0))
+        else:
+            survivedtext = font.render(
+                str(self.time_elapsed), True, (0, 0, 0))
 
         self.screen.blit(survivedtext, (self.width / 2, 10))
 
@@ -187,6 +197,8 @@ class Game:
 
         self.accel_x = x_data * accel_rate_x
         self.accel_y = y_data * accel_rate_y
+        
+        # print("Action: %f.\n Accel: %f.\nVel: %f." % (data[1], self.accel_y, self.vel_y))
         
         self.vel_x += self.accel_x
         self.vel_y += self.accel_y
@@ -205,7 +217,7 @@ class Game:
         self.turtle_pos[0] += self.vel_x
 
         if 0 < next_pos_y < self.height - 64:
-            if 0 < self.turtle_pos[0] < self.limit2 - 34 or self.limit1-34 < self.turtle_pos[0] < self.width:
+            if 0 < self.turtle_pos[0] < self.limit2 - 34 or self.limit1 - 34 < self.turtle_pos[0] < self.width:
                 if self.height / 2 - 64 <= next_pos_y <= self.height / 2:
                     self.vel_y = 0
         else:
@@ -215,41 +227,39 @@ class Game:
         self.accel_x_list.append(self.accel_x)
         self.accel_y_list.append(self.accel_y)
 
-       
         self.vel_x_list.append(self.vel_x)
         self.vel_y_list.append(self.vel_y)
 
-        self.time.append((time.time() - self.global_start_time) * 1e3 )
-        
+        self.time.append((time.time() - self.global_start_time) * 1e3)
+
         # print([self.vel_x, self.vel_y])
         # 10 - Win/Lose check
-        if self.time_elapsed >= self.TIME:
+        if self.time_dependend and self.time_elapsed >= self.TIME:
             self.running = 0
             self.exitcode = 1
             self.timedOut = True
 
-        if self.width > self.turtle_pos[0] > self.width - (80 + 40) \
-                and self.turtle_pos[1] < (80 + 60 / 2 - 32):
+        if self.width - 40 > self.turtle_pos[0] > self.width - (80 + 40) \
+                and 20 < self.turtle_pos[1] < (80 + 60 / 2 - 32):
             self.running = 0
             self.exitcode = 1
             self.finished = True  # This means final state achieved
 
         return time.time() - start_time
 
+
     def getReward(self):
-        if self.timedOut:
-            return -50
-        elif self.finished:
+        if self.finished:
             return 100
         # elif not (700 - 64 < self.turtle_pos[0] + self.turtle_pos[1] < 900 - 64):
         #     return -10
         else:
             return -1
 
-    def getObservations(self):
+    def getState(self):
         # [x position. y position, detected wrist x position]
         # Size of observation space is 2
-        return [self.turtle_pos[0], self.turtle_pos[1]]
+        return [self.accel_x, self.accel_y, self.turtle_pos[0], self.turtle_pos[1], self.vel_x, self.vel_y]
 
     def endGame(self):
         if self.exitcode == 1:
@@ -267,12 +277,12 @@ class Game:
         pygame.display.quit()
         pygame.quit()
 
-        self.plot(self.time, self.accel_x_list, "accelaration_x_axis", 'accelaration x-axis','Running time since Game started(msec)', save=True)
-        self.plot(self.time, self.accel_y_list, "accelaration_y_axis", 'accelaration x-axis','Running time since Game started(msec)', save=True)
-        self.plot(self.time, self.vel_x_list, "velocity_x_axis", 'accelaration x-axis','Running time since Game started(msec)', save=True)
-        self.plot(self.time, self.vel_y_list, "velocity_y_axis", 'accelaration x-axis','Running time since Game started(msec)', save=True)
-        self.turtle_real_y_pos_list.reverse()
-        self.plot(self.turtle_real_x_pos_list, self.turtle_real_y_pos_list, "turtle_pos", 'y-position','x-position')
+        # self.plot(self.time, self.accel_x_list, "accelaration_x_axis", 'accelaration x-axis','Running time since Game started(msec)', save=True)
+        # self.plot(self.time, self.accel_y_list, "accelaration_y_axis", 'accelaration x-axis','Running time since Game started(msec)', save=True)
+        # self.plot(self.time, self.vel_x_list, "velocity_x_axis", 'accelaration x-axis','Running time since Game started(msec)', save=True)
+        # self.plot(self.time, self.vel_y_list, "velocity_y_axis", 'accelaration x-axis','Running time since Game started(msec)', save=True)
+        # self.turtle_real_y_pos_list.reverse()
+        # self.plot(self.turtle_real_x_pos_list, self.turtle_real_y_pos_list, "turtle_pos", 'y-position','x-position')
 
     # def game_loop(self):
     #     while self.running:
