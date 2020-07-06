@@ -38,19 +38,22 @@ class controller:
 		avg_rewards = []
 		lr_list = []
 		turn_list = []
+		total_rewards = []
 		global_time = rospy.get_rostime().to_sec()
 		for exp in range(MAX_STEPS):
-			print("Experiment %d" % (exp + 1))
-			total_rewards = []
+			# print("Interaction %d" % (exp + 1))
+			
 			turns = 0
-			while self.game.running:
+			if self.game.running:
 				self.game.experiment = exp
 				turns += 1
 				start_time = time.time()
 				state = self.game.getState()
 				agent_act = self.agent.next_action(state)
+				tmp_time = time.time()
+				while time.time() - tmp_time < 0.2 :
+					exec_time = self.game.play([self.action_human, agent_act.item()])
 
-				exec_time = self.game.play([self.action_human, agent_act.item()])
 
 				reward = self.game.getReward()
 				next_state = self.game.getState()
@@ -60,26 +63,30 @@ class controller:
 				total_rewards.append(reward)
 
 				# print(len(self.agent.D))
-				if len(self.agent.D) > UPDATE_START and len(self.agent.D) % UPDATE_INTERVAL == 0:
+				if len(self.agent.D) >= UPDATE_START and len(self.agent.D) % UPDATE_INTERVAL == 0:
 					if first_update:
 						print("\nStarting updates")
 						first_update = False
+
+					print("Training")
+
 					self.agent.train()
 					lr_list.append(self.agent.lr)
 					# print("%d milliseconds per cycle." % ((time.time() - start_time) * 1000))
 				total_time.append(time.time() - start_time)
+			else:
+				turn_list.append(turns)
+				avg_rewards.append(mean(total_rewards))
+				total_rewards = []
+				# print("Average time from publishing to receiveing is %f milliseconds. \n" % (mean(self.transmit_time_list)* 1e3))
+				# self.transmit_time_list = []
+				# reset game
+				self.game = Game()
+				self.game.start_time = time.time()
 
-			turn_list.append(turns)
-			avg_rewards.append(mean(total_rewards))
-			print("Average time from publishing to receiveing is %f milliseconds. \n" % (mean(self.transmit_time_list)* 1e3))
-			self.transmit_time_list = []
-			# reset game
-			self.game = Game()
-			self.game.start_time = time.time()
-
-		plot(range(MAX_STEPS), avg_rewards, "Average_Reward_per_Turn", 'Average Reward per Turn', 'Experiments Number', "/home/liger/catkin_ws/src/hand_direction/plots/", save=True)
-		plot(range(len(lr_list)), lr_list, "Learning_Rate", 'Learning Rate', 'Training steps', "/home/liger/catkin_ws/src/hand_direction/plots/", save=True)
-		plot(range(MAX_STEPS), turn_list, "Steps_per_turn", 'Steps per Turn', 'Experiments Number', "/home/liger/catkin_ws/src/hand_direction/plots/", save=True)
+		plot(range(len(avg_rewards)), avg_rewards, "Average_Reward_per_Turn", 'Average Reward per Turn', 'Experiments Number', "/home/liger/catkin_ws/src/hand_direction/plots/", save=True)
+		plot(range(len(total_time)), total_time, "Duration_per_turn", 'Duration_per_turn', 'Training steps', "/home/liger/catkin_ws/src/hand_direction/plots/", save=True)
+		plot(range(len(turn_list)), turn_list, "Steps_per_turn", 'Steps per Turn', 'Experiments Number', "/home/liger/catkin_ws/src/hand_direction/plots/", save=True)
 
 
 		print("Average Execution time for play funtion is %f milliseconds. \n" % (mean(total_time) * 1e3))

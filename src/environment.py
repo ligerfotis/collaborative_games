@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from hyperparams_ur10 import MAX_STEPS
 
-accel_rate_x = 1 * 1e-1
-accel_rate_y = 1
+accel_rate_x = 1 * 1e-2
+accel_rate_y = 1 * 1e-2
 
 
 backgroundColor = (255, 255, 255)

@@ -12,6 +12,13 @@ from statistics import mean
 # # define hotkeys
 # escape = '\x1b'
 # exit = '\x03'
+
+UP = 'w'
+DOWN = 's'
+LEFT = 'a'
+RIGHT = 'd'
+# LEFT = 'p'
+# RIGHT = 'o'
 class KeyboardPublisher:
 
 	def __init__(self):
@@ -20,25 +27,25 @@ class KeyboardPublisher:
 
 	def keyboardPublisher(self, pub_y, pub_x):
 		key = self.readKeyboard(pub_y, pub_x)
-		if key == "w":
+		if key == UP:
 			return 1.
-		elif key == "s":
+		elif key == DOWN:
 			return -1.
-		elif key == "d":
+		elif key == RIGHT:
 			return 2.
-		elif key == "a":
+		elif key == LEFT:
 			return -2.
 		else:
 			return 0.
 
 	def readKeyboard(self, pub_y, pub_x):
 		key = self.myGetch(pub_y, pub_x)
-		if key == "w" or key == "s" or key == "d" or key == "a":
+		if key == UP or key == DOWN or key == LEFT or key == RIGHT:
 			return key
 		elif key == "q":
 			rospy.signal_shutdown("Exit Key")
 
-	def myGetch(self,pub_y, pub_x):
+	def myGetch(self, pub_y, pub_x):
 		h = std_msgs.msg.Header()
 		act = action_human()
 
@@ -52,7 +59,7 @@ class KeyboardPublisher:
 		oldflags = fcntl.fcntl(fd, fcntl.F_GETFL)
 		fcntl.fcntl(fd, fcntl.F_SETFL, oldflags | os.O_NONBLOCK)
 		counter = 0
-		try:        
+		try:
 			while 1:            
 				try:
 					c = sys.stdin.read(1)
@@ -82,8 +89,8 @@ class KeyboardPublisher:
 		h = std_msgs.msg.Header()
 		
 
-		pub_y = rospy.Publisher('/rl/action_y', action_msg, queue_size =10)
-		pub_x = rospy.Publisher('/rl/action_x', action_msg, queue_size =10)
+		pub_y = rospy.Publisher('/rl/action_y', action_msg)
+		pub_x = rospy.Publisher('/rl/action_x', action_msg)
 
 		act = action_human()
 
