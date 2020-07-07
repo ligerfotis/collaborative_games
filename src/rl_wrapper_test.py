@@ -8,7 +8,7 @@ from keypoint_3d_matching_msgs.msg import Keypoint3d_list
 from hand_direction.msg import observation, action_agent, reward_observation, action_msg
 from std_srvs.srv import Empty,EmptyResponse, Trigger
 import time
-from statistics import mean 
+from statistics import mean, stdev
 from sac import SAC
 from hyperparams_ur10 import OFF_POLICY_BATCH_SIZE as BATCH_SIZE, DISCOUNT, ENTROPY_WEIGHT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, UPDATE_INTERVAL, UPDATE_START, SAVE_INTERVAL
 
@@ -89,7 +89,7 @@ class controller:
 		plot(range(len(turn_list)), turn_list, "Steps_per_turn", 'Steps per Turn', 'Experiments Number', "/home/liger/catkin_ws/src/hand_direction/plots/", save=True)
 
 
-		print("Average Execution time for play funtion is %f milliseconds. \n" % (mean(total_time) * 1e3))
+		print("Average Execution time for play funtion is %f milliseconds(stdev: %f). \n" % (mean(total_time) * 1e3, stdev(total_time) * 1e3))
 
 		print("Total time of experiments is: %d minutes and %d seconds.\n" % ( ( rospy.get_rostime().to_sec() - global_time )/60, ( rospy.get_rostime().to_sec() - global_time )%60 )  )
 		
