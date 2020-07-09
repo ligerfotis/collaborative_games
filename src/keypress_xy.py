@@ -89,8 +89,8 @@ class KeyboardPublisher:
 		h = std_msgs.msg.Header()
 		
 
-		pub_y = rospy.Publisher('/rl/action_y', action_msg)
-		pub_x = rospy.Publisher('/rl/action_x', action_msg)
+		pub_y = rospy.Publisher('/rl/action_y', action_msg, queue_size=10)
+		pub_x = rospy.Publisher('/rl/action_x', action_msg, queue_size=10)
 
 		act = action_human()
 

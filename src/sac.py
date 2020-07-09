@@ -38,11 +38,7 @@ class SAC:
     def __init__(self):
         self.next_state = None
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        # self.state = None
-        # self.action = None
-        # self.reward = 0
-        # self.next_state = None
-        # self.final_state = Falsedw
+        print(self.device)
 
         self.action_space = 1
         self.state_space = 6
@@ -74,6 +70,8 @@ class SAC:
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=LEARNING_RATE)
         self.lr = None
 
+        self.save_count = 0
+
         if resume:
             if os.path.isfile(package_path+"/src/scripts/checkpoints_human/agent.pth"):
                 print("\nResuming training\n")
@@ -94,6 +92,17 @@ class SAC:
             else:
                 print("No checkpoint found at '{}'".format(package_path+"/src/scripts/checkpoints_human/agent.pth"))
 
+        # print("Actor")
+        # print(self.actor)
+        # print("soft Q1")
+        # print(self.critic_1)
+        # print("soft Q2")
+        # print(self.critic_2)
+        # print("State Value V")
+        # print(self.value_critic)
+
+
+
     def update_rw_state(self, state, reward, action, next_state, final_state):
         state = torch.tensor(state, dtype=torch.float32).to(self.device)
         next_state = torch.tensor(next_state).to(self.device)
@@ -103,12 +112,12 @@ class SAC:
                        'next_state': next_state.unsqueeze(0),
                        'done': torch.tensor([final_state], dtype=torch.float32, device=self.device)})
 
-    def next_action(self, state):
+    def next_action(self, state, stochastic=True):
         start_time = time.time()
         try:
             with torch.no_grad():
                 state = torch.tensor(state, dtype=torch.float32).to(self.device)
-                if len(self.D) < UPDATE_START and resume:
+                if len(self.D) < UPDATE_START and not resume:
                     # To improve exploration take actions sampled
                     # from a uniform random distribution over actions at the start of training
                     # act = self.next_action_random()
@@ -116,7 +125,10 @@ class SAC:
                     agent_act = torch.tensor([2 * random.random() - 1], device=self.device).unsqueeze(0)
                 else:
                     # Observe state s and select action a ~ mu(a|s)
-                    agent_act = self.actor(state.unsqueeze(0)).sample()
+                    if stochastic:
+                        agent_act = self.actor(state.unsqueeze(0)).sample()
+                    else:
+                        agent_act = self.actor(state.unsqueeze(0), stochastic)
 
                 # print("Action Time: %f." % ( (time.time()-start_time)*1e3))
                 return agent_act
@@ -124,12 +136,22 @@ class SAC:
             print("Exception in acting")
 
 
-    def train(self):
+    def train(self, sample=None, verbose=True):
         try:
-            # Randomly sample a batch of transitions B = {(s, a, r, s', d)} from D
-            batch = random.sample(self.D, BATCH_SIZE)
-
-            batch = dict((k, torch.cat([d[k] for d in batch], dim=0)) for k in batch[0].keys())
+            if sample is None:
+                # Randomly sample a batch of transitions B = {(s, a, r, s', d)} from D
+                batch = random.sample(self.D, BATCH_SIZE)
+                batch = dict((k, torch.cat([d[k] for d in batch], dim=0)) for k in batch[0].keys())
+            else:
+                state = torch.tensor(sample[0], dtype=torch.float32).to(self.device)
+                next_state = torch.tensor(sample[3]).to(self.device)
+                batch = {'state': state.unsqueeze(0),
+                       'action': sample[2],
+                       'reward': torch.tensor([sample[1]], dtype=torch.float32, device=self.device),
+                       'next_state': next_state.unsqueeze(0),
+                       'done': torch.tensor([sample[5]], dtype=torch.float32, device=self.device)}
+                print("single batch")
+                print(batch)
 
             # Compute targets for Q and V functions
             y_q = batch['reward'] + DISCOUNT * (1 - batch['done']) * self.target_value_critic(
@@ -179,9 +201,11 @@ class SAC:
             update_target_network(self.value_critic, self.target_value_critic, POLYAK_FACTOR)
 
             # Saving policy
-            if len(self.D) % SAVE_INTERVAL == 0:
+            if self.save_count == SAVE_INTERVAL:
+                self.save_count = 0
                 # Reset
-                print("Saving")
+                if verbose:
+                    print("Saving")
 
                 torch.save({
                     'actor_state_dict': self.actor.state_dict(),
@@ -194,8 +218,9 @@ class SAC:
                     'critics_optimiser_state_dict': self.critics_optimiser.state_dict(),
                     'alpha_optimizer_state_dict': self.alpha_optimizer.state_dict(),
                 }, "/home/liger/catkin_ws/src/hand_direction/src/scripts/checkpoints_human/agent.pth")
-                print("Saving replay buffer")
-                # pickle.dump(self.D, open("/scripts/checkpoints_human/agent.p", "wb"))
+                # print("Saving replay buffer")
+                pickle.dump(self.D, open("/home/liger/catkin_ws/src/hand_direction/src/scripts/checkpoints_human/agent.p", "wb"))
+            self.save_count += 1
 
             torch.cuda.empty_cache()
 
@@ -203,3 +228,5 @@ class SAC:
             print("Exception in training")
 
             exit(1)
+
+

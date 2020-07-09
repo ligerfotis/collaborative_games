@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
 
-	<node pkg="hand_direction" type="rl_wrapper_test.py" respawn="false" name="Environment" output="screen">
+	<node pkg="hand_direction" type="rl_wrapper_train.py" respawn="false" name="Environment" output="screen">
 	  </node>
 
 	<!-- <node pkg="hand_direction" type="keypoint_to_action.py" respawn="false" name="Human_Hand" output="screen">

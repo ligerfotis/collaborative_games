@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from hyperparams_ur10 import MAX_STEPS
 
-accel_rate_x = 1 * 1e-2
-accel_rate_y = 1 * 1e-2
+accel_rate_x = 5 * 1e-3
+accel_rate_y = 5 * 1e-3
 
 
 backgroundColor = (255, 255, 255)
@@ -40,7 +40,7 @@ def quit_game():
 class Game:
     def __init__(self):
         self.experiment = 0
-        self.TIME = 30
+        self.TIME = 40
         self.start_time = None
         self.time_elapsed = 0
         # 2 - Initialize the game
@@ -88,7 +88,7 @@ class Game:
         self.accel_x, self.accel_y, self.vel_x, self.vel_y = [0, 0, 0, 0]
 
         self.clock = pygame.time.Clock()
-        self.time_dependend = False
+        self.time_dependend = True
 
         self.intro = True
 
@@ -162,6 +162,7 @@ class Game:
             self.clock.tick(15)
 
     def play(self, data=None):
+        # print(data)
         start_time = time.time()
         if data is None:
             data = [0, 0]
@@ -180,6 +181,7 @@ class Game:
         self.turtle_real_y_pos_list.append(turtle[1])
         # 6.4 - Draw clock
         font = pygame.font.Font(None, 24)
+
         self.time_elapsed = int(floor(time.time() - self.start_time))
         if self.time_dependend:
             survivedtext = font.render(
@@ -213,7 +215,6 @@ class Game:
         self.accel_y = y_data * accel_rate_y
         
         # print("Action: %f.\n Accel: %f.\nVel: %f." % (data[1], self.accel_y, self.vel_y))
-        
         self.vel_x += self.accel_x
         self.vel_y += self.accel_y
 
@@ -261,6 +262,17 @@ class Game:
 
         return time.time() - start_time
 
+    def waitScreen(self):
+        pygame.font.init()
+        font = pygame.font.Font(None, 64)
+        text = font.render("Training... Please Wait.", True, (0, 255, 0))
+        textRect = text.get_rect()
+        textRect.centerx = self.screen.get_rect().centerx
+        textRect.centery = self.screen.get_rect().centery + 24
+        # screen.blit(youwin, (100, 100))
+        self.screen.blit(text, (250, 300))
+        pygame.display.flip()
+        time.sleep(1)
 
     def getReward(self):
         if self.finished:
@@ -315,5 +327,4 @@ class Game:
     #         plt.savefig("/home/liger/catkin_ws/src/hand_direction/" + figure_title)
     #     else:
     #         plt.show()
-
 

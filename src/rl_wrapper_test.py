@@ -33,14 +33,9 @@ class controller:
 
 
 	def game_loop(self):
-		first_update = True
-		total_time = []
-		avg_rewards = []
-		lr_list = []
-		turn_list = []
-		total_rewards = []
-		global_time = rospy.get_rostime().to_sec()
-		for exp in range(MAX_STEPS):
+		score = 200
+
+		for game in range(10):
 			# print("Interaction %d" % (exp + 1))
 			
 			turns = 0
@@ -63,7 +58,7 @@ class controller:
 				total_rewards.append(reward)
 
 				# print(len(self.agent.D))
-				if len(self.agent.D) >= UPDATE_START and len(self.agent.D) % UPDATE_INTERVAL == 0:
+				if len(self.agent.D) >= UPDATE_START and exp % UPDATE_INTERVAL == 0:
 					if first_update:
 						print("\nStarting updates")
 						first_update = False

@@ -63,10 +63,13 @@ class SoftActor(nn.Module):
                   nn.Linear(hidden_size, 2)]
         self.policy = nn.Sequential(*layers)
 
-    def forward(self, state):
+    def forward(self, state, stochastic=True):
         policy_mean, policy_log_std = self.policy(state).chunk(2, dim=1)
         policy_log_std = torch.clamp(policy_log_std, min=self.log_std_min, max=self.log_std_max)
-        policy = TanhNormal(policy_mean, policy_log_std.exp())
+        if stochastic:
+            policy = TanhNormal(policy_mean, policy_log_std.exp())
+        else:
+            policy = policy_mean
         return policy
 
 

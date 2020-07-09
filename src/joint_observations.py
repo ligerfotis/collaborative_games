@@ -10,7 +10,7 @@ from hand_direction.msg import observation
 class Observations(object):
     def __init__(self):
         self.obs_robot_sub = message_filters.Subscriber("/rl/reward_and_observation_game", reward_observation)
-        self.act_human_sub = message_filters.Subscriber("/rl/action_x", action_msg)
+        self.act_human_sub = message_filters.Subscriber("/rl/action_x", action_msg) 
 
 
         self.ts = message_filters.ApproximateTimeSynchronizer([self.obs_robot_sub, self.act_human_sub], 1, 1)
