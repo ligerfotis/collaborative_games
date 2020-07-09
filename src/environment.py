@@ -91,6 +91,7 @@ class Game:
         self.time_dependend = True
 
         self.intro = True
+        self.pause = False
 
         pygame.display.update()
 
@@ -126,7 +127,11 @@ class Game:
                     quit_game()
                 elif action == "reset":
                     self.turtle_pos = [5, self.height - 64]
-
+                elif action == "unpause":
+                    self.pause = False
+                elif action == "pause":
+                    self.pause = True
+                    self.paused()
         else:
             pygame.draw.rect(self.screen, ic, (x, y, w, h))
 
@@ -198,8 +203,10 @@ class Game:
 
         try:
             self.button("reset", 2, 2, 80, 40, BLUE, bright_green, "reset")
+            self.button("pause", 2, 42, 80, 40, WHITE, bright_green, "pause")
         except pygame.error:
             print("An exception occurred")
+
 
         # 7 - update the screen
         pygame.display.flip()
@@ -262,15 +269,46 @@ class Game:
 
         return time.time() - start_time
 
+
+    def paused(self):
+        largeText = pygame.font.SysFont("comicsansms",115)
+        TextSurf, TextRect = text_objects("Paused", largeText)
+        TextRect.center = ((self.width/2),(self.height/2))
+        self.screen.blit(TextSurf, TextRect)
+        
+
+        while self.pause:
+            for event in pygame.event.get():
+
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    quit()
+            
+            self.screen.fill(WHITE)
+
+            font = pygame.font.Font(None, 64)
+            text = font.render("Paused", True, BLACK)
+            textRect = text.get_rect()
+            textRect.centerx = self.screen.get_rect().centerx
+            textRect.centery = self.screen.get_rect().centery + 24
+            # screen.blit(youwin, (100, 100))
+            self.screen.blit(text, (300, 300))
+
+            self.button("Continue",150,450,100,50,GREEN,bright_green,"unpause")
+            self.button("Quit",550,450,100,50,RED,bright_red,"quit")
+
+            pygame.display.update()
+            self.clock.tick(15)
+
     def waitScreen(self):
         pygame.font.init()
         font = pygame.font.Font(None, 64)
-        text = font.render("Training... Please Wait.", True, (0, 255, 0))
+        text = font.render("Training... Please Wait.", True, RED)
         textRect = text.get_rect()
         textRect.centerx = self.screen.get_rect().centerx
         textRect.centery = self.screen.get_rect().centery + 24
         # screen.blit(youwin, (100, 100))
-        self.screen.blit(text, (250, 300))
+        self.screen.blit(text, (180, 300))
         pygame.display.flip()
         time.sleep(1)
 
