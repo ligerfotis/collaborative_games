@@ -22,7 +22,7 @@ import rospkg
 rospack = rospkg.RosPack()
 package_path = rospack.get_path("hand_direction")
 
-offline_updates_num = 20000
+offline_updates_num = 100
 
 class controller:
 
@@ -131,7 +131,7 @@ class controller:
 		# mean_list.append(mean_score)
 		# stdev_list.append(stdev_score)
 
-		plot(range(len(avg_rewards)), avg_rewards, "Average_Reward_per_Turn", 'Average Reward per Turn', 'Experiments Number', path, save=True)
+		plot(range(len(avg_rewards)), avg_rewards, "Average_Reward_per_Turn", 'Average Reward per Turn', 'Experiments Number', package_path + "/plots/", save=True)
 		plot(range(len(total_time)), total_time, "Duration_per_turn", 'Duration_per_turn', 'Training steps', package_path + "/plots/", save=True)
 		plot(range(len(turn_list)), turn_list, "Steps_per_turn", 'Steps per Turn', 'Experiments Number', package_path + "/plots/", save=True)
 
