@@ -20,6 +20,8 @@ import rospkg
 resume = False
 rospack = rospkg.RosPack()
 package_path = rospack.get_path("hand_direction")
+path = "/home/liger/catkin_ws/src/hand_direction/src/"
+
 
 def next_action_random():
     rand = np.random.randint(low=1, high=11)
@@ -217,9 +219,9 @@ class SAC:
                     'actor_optimiser_state_dict': self.actor_optimiser.state_dict(),
                     'critics_optimiser_state_dict': self.critics_optimiser.state_dict(),
                     'alpha_optimizer_state_dict': self.alpha_optimizer.state_dict(),
-                }, "/home/liger/catkin_ws/src/hand_direction/src/scripts/checkpoints_human/agent.pth")
+                }, path + "scripts/checkpoints_human/agent.pth")
                 # print("Saving replay buffer")
-                pickle.dump(self.D, open("/home/liger/catkin_ws/src/hand_direction/src/scripts/checkpoints_human/agent.p", "wb"))
+                pickle.dump(self.D, open(path + "scripts/checkpoints_human/agent.p", "wb"))
             self.save_count += 1
 
             torch.cuda.empty_cache()

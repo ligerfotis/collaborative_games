@@ -26,7 +26,7 @@ BLACK = (0, 0, 0)
 bright_red = (255, 0, 0)
 bright_green = (0, 255, 0)
 
-
+path = "/home/liger/catkin_ws/src/hand_direction/src/"
 
 def text_objects(text, font):
     textSurface = font.render(text, True, BLACK)
@@ -56,8 +56,8 @@ class Game:
         self.turtle_pos = [5, self.height - 64]
         self.reward = 0
         # 3 - Load images
-        self.player = pygame.image.load("/home/liger/PycharmProjects/CollaborativeRL/resources/images/turtle.png").convert_alpha()
-        self.youwin = pygame.image.load("/home/liger/PycharmProjects/CollaborativeRL/resources/images/youwin.png").convert_alpha()
+        self.player = pygame.image.load(path + "turtle.png").convert_alpha()
+        self.youwin = pygame.image.load(path + "youwin.png").convert_alpha()
         obst_x, obsty = self.width / 2, self.height / 2
         self.running = 1
         self.exitcode = 0
