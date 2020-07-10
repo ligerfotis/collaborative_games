@@ -22,7 +22,7 @@ import rospkg
 rospack = rospkg.RosPack()
 package_path = rospack.get_path("hand_direction")
 
-offline_updates_num = 20000
+offline_updates_num = 100
 test_num = 10
 
 class controller:
