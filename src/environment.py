@@ -43,7 +43,7 @@ def quit_game():
 class Game:
     def __init__(self):
         self.experiment = 0
-        self.TIME = 30
+        self.TIME = 40
         self.start_time = None
         self.time_elapsed = 0
         # 2 - Initialize the game

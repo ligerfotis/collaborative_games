@@ -49,7 +49,7 @@ class controller:
 
 	def game_loop(self):
 		first_update = True
-		avg_rewards = []
+		rewards_list = []
 		turn_list = []
 		interaction_time_list = []
 		interaction_training_time_list = []
@@ -116,20 +116,21 @@ class controller:
 					self.resetGame()
 			else:
 				turn_list.append(self.turns)
-				avg_rewards.append(self.total_reward_per_game)
+				rewards_list.append(self.total_reward_per_game)
 				
 				# reset game
 				self.resetGame()
 
-		plot(range(len(avg_rewards)), avg_rewards, "Average_Reward_per_Turn", 'Average Reward per Turn', 'Experiments Number', package_path + "/plots/", save=True)
-		plot(range(len(turn_list)), turn_list, "Steps_per_turn", 'Steps per Turn', 'Experiments Number', package_path + "/plots/", save=True)		
+		plot(range(len(rewards_list)), rewards_list, "Rewards_per_Turn", 'Rewards per Turn', 'Number of Games', package_path + "/plots/", save=True)
+		plot(range(len(turn_list)), turn_list, "Steps_per_turn", 'Steps per Turn', 'Number of Games', package_path + "/plots/", save=True)		
 
 		print(mean_list)
 		print(stdev_list)
 		plt.plot(range(0,MAX_STEPS, UPDATE_INTERVAL), mean_list, 'k')
 		plt.fill_between(range(0,MAX_STEPS, UPDATE_INTERVAL), np.array(mean_list) - np.array(stdev_list),np.array(mean_list) + np.array(stdev_list))
-		plt.show()
 		plt.savefig( package_path + "/plots/" + "trials")
+		plt.show()
+		
 
 		print("Average Execution time per interaction: %f milliseconds(stdev: %f). \n" % (mean(interaction_time_list) * 1e3, stdev(interaction_time_list) * 1e3))
 		print("Average Execution time per interaction and online update: %f milliseconds(stdev: %f). \n" % (mean(interaction_training_time_list) * 1e3, stdev(interaction_training_time_list) * 1e3))
