@@ -43,7 +43,7 @@ def quit_game():
 class Game:
     def __init__(self):
         self.experiment = 0
-        self.TIME = 10
+        self.TIME = 30
         self.start_time = None
         self.time_elapsed = 0
         # 2 - Initialize the game
@@ -100,6 +100,8 @@ class Game:
         self.intro = True
         self.pause = False
 
+
+
         pygame.display.update()
 
     def obstacle(self):
@@ -128,7 +130,6 @@ class Game:
             pygame.draw.rect(self.screen, ac, (x, y, w, h))
             if click[0] == 1 and action is not None:
                 if action == "play":
-                    self.start_time = time.time()
                     self.intro = False
                 elif action == "quit":
                     quit_game()
@@ -173,7 +174,7 @@ class Game:
             pygame.display.update()
             self.clock.tick(15)
 
-    def play(self, data=None):
+    def play(self, data=None, total_games=MAX_STEPS):
         # print(data)
         start_time = time.time()
         if data is None:
@@ -204,7 +205,7 @@ class Game:
 
         self.screen.blit(survivedtext, (self.width / 2, 10))
 
-        game_num_text = font.render("Game: " + str(self.experiment) + "/" + str(MAX_STEPS), True, (0, 0, 0))
+        game_num_text = font.render("Game: " + str(self.experiment) + "/" + str(total_games), True, (0, 0, 0))
 
         self.screen.blit(game_num_text, (90, 10))
 
@@ -307,17 +308,40 @@ class Game:
             pygame.display.update()
             self.clock.tick(15)
 
-    def waitScreen(self):
+    def waitScreen(self, msg1, msg2=None, duration=None):
+        self.screen.fill(WHITE)
         pygame.font.init()
-        font = pygame.font.Font(None, 64)
-        text = font.render("Training... Please Wait.", True, RED)
+        font_text1 = pygame.font.Font(None, 40)
+        font_text2 = pygame.font.Font(None, 40)
+        font_text3 = pygame.font.Font(None, 50)
+
+        text = font_text1.render(msg1, True, RED)
         textRect = text.get_rect()
         textRect.centerx = self.screen.get_rect().centerx
         textRect.centery = self.screen.get_rect().centery + 24
         # screen.blit(youwin, (100, 100))
         self.screen.blit(text, (180, 300))
+        
         pygame.display.flip()
-        time.sleep(1)
+        
+        if duration is not None:
+            for step in range(duration):
+                self.screen.fill(WHITE)
+                self.screen.blit(text, (180, 300))
+
+                text2 = font_text2.render("Game Starts in: ", True, BLACK)
+                self.screen.blit(text2, (250, 350))
+
+                font_num = pygame.font.Font(None, 50)
+                time_text = font_num.render(str(duration - step - 1), True, BLACK)
+                self.screen.blit(time_text, (480, 345))
+
+                if msg2 is not None:
+                    text3 = font_text3.render(msg2, True, BLUE)
+                    self.screen.blit(text3, (170, 400))
+
+                pygame.display.flip()
+                time.sleep(1)
 
     def getReward(self):
         if self.finished:

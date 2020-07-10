@@ -22,13 +22,15 @@ import rospkg
 rospack = rospkg.RosPack()
 package_path = rospack.get_path("hand_direction")
 
-offline_updates_num = 100
+offline_updates_num = 20000
 test_num = 10
+
+action_duration = 0.2 # 200 milliseconds
 
 class controller:
 
 	def __init__(self):
-		print("init")
+		# print("init")
 		self.game = Game()
 		self.agent = SAC()
 
@@ -47,44 +49,42 @@ class controller:
 
 	def game_loop(self):
 		first_update = True
-		total_time = []
 		avg_rewards = []
 		turn_list = []
-		score_lists = []
-		total_rewards = []
+		interaction_time_list = []
+		interaction_training_time_list = []
 		mean_list = []
 		stdev_list = []
-
 		global_time = rospy.get_rostime().to_sec()
-		
+
+		self.resetGame()
+
 		for exp in range(MAX_STEPS+1):
-			# print("Interaction %d" % (exp + 1))
-			
-			turns = 0
+
 			if self.game.running:
+				start_interaction_time = time.time()
+
 				self.game.experiment = exp
-				turns += 1
-				start_time = time.time()
+				self.turns += 1
+
 				state = self.game.getState()
 				agent_act = self.agent.next_action(state)
 
 				tmp_time = time.time()
 				act_human = self.action_human
 
-				# print([act_human, agent_act.item()])
-				while time.time() - tmp_time < 0.2 :
+				while time.time() - tmp_time < action_duration :
 					exec_time = self.game.play([act_human, agent_act.item()])
-					# exec_time = self.game.play([act_human, agent_act.item()])
 					
-
-
 				reward = self.game.getReward()
 				next_state = self.game.getState()
 				done = self.game.finished
 				# episode = state, reward, agent_act, next_state, done
 
 				self.agent.update_rw_state(state, reward, agent_act, next_state, done)
-				total_rewards.append(reward)
+				self.total_reward_per_game += reward 
+
+				interaction_time_list.append(time.time() - start_interaction_time)
 
 				# when replay buffer has enough samples update gradient at every turn
 				if len(self.agent.D) >= BATCH_SIZE:
@@ -95,15 +95,17 @@ class controller:
 
 					self.agent.train()
 
+					interaction_training_time_list.append(time.time() - start_interaction_time)
+
 				# run "offline_updates_num" offline gradient updates every "UPDATE_INTERVAL" steps
 				if len(self.agent.D) >= BATCH_SIZE and exp % UPDATE_INTERVAL == 0:
 
 					print(str(offline_updates_num) + " Gradient upadates")
-					self.game.waitScreen()
+					self.game.waitScreen("Training... Please Wait.")
 
 					pbar = tqdm(xrange(1, offline_updates_num + 1), unit_scale=1, smoothing=0)
 					for _ in pbar:
-						self.agent.train(verbose=False)
+						self.agent.train(verbose=True)
 
 					# run trials
 					mean_score, stdev_score =  self.test()
@@ -111,32 +113,16 @@ class controller:
 					mean_list.append(mean_score)
 					stdev_list.append(stdev_score)
 
-					self.game = Game()
-					self.game.start_time = time.time()
-
-				total_time.append(time.time() - start_time)
+					self.resetGame()
 			else:
-				turn_list.append(turns)
-				avg_rewards.append(mean(total_rewards))
-				total_rewards = []
-				# print("Average time from publishing to receiveing is %f milliseconds. \n" % (mean(self.transmit_time_list)* 1e3))
-				# self.transmit_time_list = []
-
+				turn_list.append(self.turns)
+				avg_rewards.append(self.total_reward_per_game)
+				
 				# reset game
-				self.game = Game()
-				self.game.start_time = time.time()
-				self.action_human = 0.0
-
-		# mean_score, stdev_score =  self.test()
-					
-		# mean_list.append(mean_score)
-		# stdev_list.append(stdev_score)
+				self.resetGame()
 
 		plot(range(len(avg_rewards)), avg_rewards, "Average_Reward_per_Turn", 'Average Reward per Turn', 'Experiments Number', package_path + "/plots/", save=True)
-		plot(range(len(total_time)), total_time, "Duration_per_turn", 'Duration_per_turn', 'Training steps', package_path + "/plots/", save=True)
-		plot(range(len(turn_list)), turn_list, "Steps_per_turn", 'Steps per Turn', 'Experiments Number', package_path + "/plots/", save=True)
-
-		
+		plot(range(len(turn_list)), turn_list, "Steps_per_turn", 'Steps per Turn', 'Experiments Number', package_path + "/plots/", save=True)		
 
 		print(mean_list)
 		print(stdev_list)
@@ -145,14 +131,12 @@ class controller:
 		plt.show()
 		plt.savefig( package_path + "/plots/" + "trials")
 
-		print("Average Execution time for play funtion is %f milliseconds(stdev: %f). \n" % (mean(total_time) * 1e3, stdev(total_time) * 1e3))
+		print("Average Execution time per interaction: %f milliseconds(stdev: %f). \n" % (mean(interaction_time_list) * 1e3, stdev(interaction_time_list) * 1e3))
+		print("Average Execution time per interaction and online update: %f milliseconds(stdev: %f). \n" % (mean(interaction_training_time_list) * 1e3, stdev(interaction_training_time_list) * 1e3))
+
 		print("Total time of experiments is: %d minutes and %d seconds.\n" % ( ( rospy.get_rostime().to_sec() - global_time )/60, ( rospy.get_rostime().to_sec() - global_time )%60 )  )
 		
 		self.game.endGame()
-
-
-		# print("Average Execution time for play funtion is %f milliseconds. \n" % ( mean(total_time)*1e3 ))			
-		# print("Average time from publishing to receiveing is %f milliseconds. \n" % (mean(self.transmit_time_list)* 1e3))
 
 	def test(self):
 
@@ -160,24 +144,33 @@ class controller:
 		for game in range(test_num):
 			score = 200
 
-			self.game = Game()
-			self.game.start_time = time.time()
+			self.resetGame("Testing Model. Trial %d of %d." % (game+1,test_num))
+
 			while self.game.running:
-				self.game.experiment = "Test" + str(game+1)
+				self.game.experiment = "Test: " + str(game+1)
 
 				state = self.game.getState()
 				agent_act = self.agent.next_action(state, stochastic=False) # take only the mean
-				print(agent_act)
+				# print(agent_act)
 				tmp_time = time.time()
 				while time.time() - tmp_time < 0.2 :
-					exec_time = self.game.play([self.action_human, agent_act.item()])
+					exec_time = self.game.play([self.action_human, agent_act.item()], total_games=test_num)
 
 				score -= 1
 
 			score_list.append(score)
-			self.action_human = 0.0
 
 		return [mean(score_list), stdev(score_list)]
+
+	def resetGame(self, msg=None):
+		wait_time = 3
+		self.game.waitScreen(msg1="Put Right Wrist on starting point.", msg2=msg, duration=wait_time)
+		self.game = Game()
+		self.action_human = 0.0
+		self.game.start_time = time.time()
+		self.total_reward_per_game = 0
+		self.turns = 0
+
 
 
 if __name__ == '__main__':

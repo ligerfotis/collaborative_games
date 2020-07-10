@@ -39,7 +39,7 @@ class SAC:
     def __init__(self):
         self.next_state = None
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(self.device)
+        print("SAC Agent is using %s device." % (self.device))
 
         self.action_space = 1
         self.state_space = 6
@@ -93,16 +93,6 @@ class SAC:
             else:
                 print("No checkpoint found at '{}'".format(package_path+"/src/scripts/checkpoints_human/agent.pth"))
 
-        # print("Actor")
-        # print(self.actor)
-        # print("soft Q1")
-        # print(self.critic_1)
-        # print("soft Q2")
-        # print(self.critic_2)
-        # print("State Value V")
-        # print(self.value_critic)
-
-
 
     def update_rw_state(self, state, reward, action, next_state, final_state):
         state = torch.tensor(state, dtype=torch.float32).to(self.device)
@@ -119,11 +109,9 @@ class SAC:
             with torch.no_grad():
                 state = torch.tensor(state, dtype=torch.float32).to(self.device)
                 if len(self.D) < UPDATE_START and not resume:
-                    # To improve exploration take actions sampled
-                    # from a uniform random distribution over actions at the start of training
-                    # act = self.next_action_random()
-                    # agent_act = torch.tensor([act], dtype=torch.float32, device=self.device).unsqueeze(0)
+
                     agent_act = torch.tensor([2 * random.random() - 1], device=self.device).unsqueeze(0)
+
                 else:
                     # Observe state s and select action a ~ mu(a|s)
                     if stochastic:
@@ -131,7 +119,6 @@ class SAC:
                     else:
                         agent_act = self.actor(state.unsqueeze(0), stochastic)
 
-                # print("Action Time: %f." % ( (time.time()-start_time)*1e3))
                 return agent_act
         except KeyboardInterrupt:
             print("Exception in acting")
@@ -219,7 +206,6 @@ class SAC:
                     'critics_optimiser_state_dict': self.critics_optimiser.state_dict(),
                     'alpha_optimizer_state_dict': self.alpha_optimizer.state_dict(),
                 }, package_path + "/src/scripts/checkpoints_human/agent.pth")
-                # print("Saving replay buffer")
                 pickle.dump(self.D, open(package_path + "/src/scripts/checkpoints_human/agent.p", "wb"))
             self.save_count += 1
 

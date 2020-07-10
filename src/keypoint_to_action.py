@@ -10,7 +10,7 @@ import std_msgs
 class Converter:
 
 	def __init__(self):
-		print("init")
+		# print("init")
 		self.keypoint_sub = rospy.Subscriber("/topic_transform", Keypoint3d_list, self.callback)
 		self.action_human_pub = rospy.Publisher('/rl/action_x', action_msg, queue_size = 10)
 		self.prev_x = None
@@ -28,7 +28,7 @@ class Converter:
 			else:
 				# return shift * self.speed
 				self.prev_x = pos_x
-				if shift > 0:
+				if shift < 0:
 					return -1
 				else:
 					return 1
