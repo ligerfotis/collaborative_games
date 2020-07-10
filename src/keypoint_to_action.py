@@ -12,7 +12,7 @@ class Converter:
 	def __init__(self):
 		print("init")
 		self.keypoint_sub = rospy.Subscriber("/topic_transform", Keypoint3d_list, self.callback)
-		self.action_human_pub = rospy.Publisher('/rl/hand_action_x', action_msg, queue_size = 10)
+		self.action_human_pub = rospy.Publisher('/rl/action_x', action_msg, queue_size = 10)
 		self.prev_x = None
 		# self.speed = 1500
 		
@@ -22,11 +22,12 @@ class Converter:
 				self.prev_x = shift = pos_x
 			else:
 				shift = pos_x - self.prev_x
-				self.prev_x = pos_x
-			if abs(shift) < 0.004:
+
+			if abs(shift) < 0.03:
 				return 0
 			else:
 				# return shift * self.speed
+				self.prev_x = pos_x
 				if shift < 0:
 					return -1
 				else:

@@ -137,7 +137,7 @@ class controller:
 
 		print(mean_list)
 		print(stdev_list)
-		plt.plot(range(len(mean_list)), mean_list, 'k')
+		plt.plot(range(0,MAX_STEPS, UPDATE_INTERVAL), mean_list, 'k')
 		plt.fill_between(range(len(mean_list)), np.array(mean_list) - np.array(stdev_list),np.array(mean_list) + np.array(stdev_list))
 		plt.show()
 		plt.savefig(path + "trials")

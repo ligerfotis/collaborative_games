@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from hyperparams_ur10 import MAX_STEPS
 
-accel_rate_x = 5 * 1e-3
+
+accel_rate_x = 1 * 1e-3
 accel_rate_y = 5 * 1e-3
 
 
@@ -47,12 +48,16 @@ class Game:
         pygame.init()
         self.width, self.height = 800, 800
         self.screen = pygame.display.set_mode((self.width, self.height))
+        flags = DOUBLEBUF
+        self.screen = pygame.display.set_mode((self.width, self.height), flags)
+        self.screen.set_alpha(None)
+
         self.keys = [False, False, False, False]
         self.turtle_pos = [5, self.height - 64]
         self.reward = 0
         # 3 - Load images
-        self.player = pygame.image.load("/home/liger/PycharmProjects/CollaborativeRL/resources/images/turtle.png")
-        self.youwin = pygame.image.load("/home/liger/PycharmProjects/CollaborativeRL/resources/images/youwin.png")
+        self.player = pygame.image.load("/home/liger/PycharmProjects/CollaborativeRL/resources/images/turtle.png").convert_alpha()
+        self.youwin = pygame.image.load("/home/liger/PycharmProjects/CollaborativeRL/resources/images/youwin.png").convert_alpha()
         obst_x, obsty = self.width / 2, self.height / 2
         self.running = 1
         self.exitcode = 0
