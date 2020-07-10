@@ -15,9 +15,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from utils import plot
 from tqdm import tqdm
+import rospkg
 
 
-path = "/home/liger/catkin_ws/src/hand_direction/plots/"
+# path = "/home/fligerakis/catkin_ws/src/hand_direction/plots/"
+rospack = rospkg.RosPack()
+package_path = rospack.get_path("hand_direction")
+
 offline_updates_num = 20000
 
 class controller:
@@ -52,7 +56,7 @@ class controller:
 
 		global_time = rospy.get_rostime().to_sec()
 		
-		for exp in range(MAX_STEPS):
+		for exp in range(MAX_STEPS+1):
 			# print("Interaction %d" % (exp + 1))
 			
 			turns = 0
@@ -122,23 +126,21 @@ class controller:
 				self.game.start_time = time.time()
 				self.action_human = 0.0
 
-		mean_score, stdev_score =  self.test()
+		# mean_score, stdev_score =  self.test()
 					
-		mean_list.append(mean_score)
-		stdev_list.append(stdev_score)
+		# mean_list.append(mean_score)
+		# stdev_list.append(stdev_score)
 
 		plot(range(len(avg_rewards)), avg_rewards, "Average_Reward_per_Turn", 'Average Reward per Turn', 'Experiments Number', path, save=True)
-		plot(range(len(total_time)), total_time, "Duration_per_turn", 'Duration_per_turn', 'Training steps', path, save=True)
-		plot(range(len(turn_list)), turn_list, "Steps_per_turn", 'Steps per Turn', 'Experiments Number', path, save=True)
+		plot(range(len(total_time)), total_time, "Duration_per_turn", 'Duration_per_turn', 'Training steps', package_path + "/plots/", save=True)
+		plot(range(len(turn_list)), turn_list, "Steps_per_turn", 'Steps per Turn', 'Experiments Number', package_path + "/plots/", save=True)
 
-		
-		
 		
 
 		print(mean_list)
 		print(stdev_list)
 		plt.plot(range(0,MAX_STEPS, UPDATE_INTERVAL), mean_list, 'k')
-		plt.fill_between(range(len(mean_list)), np.array(mean_list) - np.array(stdev_list),np.array(mean_list) + np.array(stdev_list))
+		plt.fill_between(range(0,MAX_STEPS, UPDATE_INTERVAL), np.array(mean_list) - np.array(stdev_list),np.array(mean_list) + np.array(stdev_list))
 		plt.show()
 		plt.savefig(path + "trials")
 

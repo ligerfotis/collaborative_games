@@ -23,12 +23,12 @@ class Converter:
 			else:
 				shift = pos_x - self.prev_x
 
-			if abs(shift) < 0.03:
+			if abs(shift) < 0.10:
 				return 0
 			else:
 				# return shift * self.speed
 				self.prev_x = pos_x
-				if shift < 0:
+				if shift > 0:
 					return -1
 				else:
 					return 1

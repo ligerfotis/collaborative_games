@@ -11,7 +11,7 @@ from hand_direction.msg import action_agent
 import matplotlib.pyplot as plt
 import numpy as np
 from hyperparams_ur10 import MAX_STEPS
-
+import rospkg
 
 accel_rate_x = 1 * 1e-3
 accel_rate_y = 5 * 1e-3
@@ -26,7 +26,9 @@ BLACK = (0, 0, 0)
 bright_red = (255, 0, 0)
 bright_green = (0, 255, 0)
 
-path = "/home/liger/catkin_ws/src/hand_direction/src/"
+# path = "/home/fligerakis/catkin_ws/src/hand_direction/src/"
+rospack = rospkg.RosPack()
+package_path = rospack.get_path("hand_direction")
 
 def text_objects(text, font):
     textSurface = font.render(text, True, BLACK)
@@ -56,8 +58,8 @@ class Game:
         self.turtle_pos = [5, self.height - 64]
         self.reward = 0
         # 3 - Load images
-        self.player = pygame.image.load(path + "turtle.png").convert_alpha()
-        self.youwin = pygame.image.load(path + "youwin.png").convert_alpha()
+        self.player = pygame.image.load(package_path + "/src/turtle.png").convert_alpha()
+        self.youwin = pygame.image.load(package_path + "/src/youwin.png").convert_alpha()
         obst_x, obsty = self.width / 2, self.height / 2
         self.running = 1
         self.exitcode = 0
