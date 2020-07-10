@@ -22,7 +22,8 @@ import rospkg
 rospack = rospkg.RosPack()
 package_path = rospack.get_path("hand_direction")
 
-offline_updates_num = 100
+offline_updates_num = 20000
+test_num = 10
 
 class controller:
 
@@ -142,7 +143,7 @@ class controller:
 		plt.plot(range(0,MAX_STEPS, UPDATE_INTERVAL), mean_list, 'k')
 		plt.fill_between(range(0,MAX_STEPS, UPDATE_INTERVAL), np.array(mean_list) - np.array(stdev_list),np.array(mean_list) + np.array(stdev_list))
 		plt.show()
-		plt.savefig(path + "trials")
+		plt.savefig( package_path + "/plots/" + "trials")
 
 		print("Average Execution time for play funtion is %f milliseconds(stdev: %f). \n" % (mean(total_time) * 1e3, stdev(total_time) * 1e3))
 		print("Total time of experiments is: %d minutes and %d seconds.\n" % ( ( rospy.get_rostime().to_sec() - global_time )/60, ( rospy.get_rostime().to_sec() - global_time )%60 )  )
@@ -156,7 +157,7 @@ class controller:
 	def test(self):
 
 		score_list = []
-		for game in range(10):
+		for game in range(test_num):
 			score = 200
 
 			self.game = Game()
