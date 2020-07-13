@@ -121,8 +121,10 @@ class controller:
 				# reset game
 				self.resetGame()
 
-		plot(range(len(rewards_list)), rewards_list, "Rewards_per_Turn", 'Rewards per Turn', 'Number of Games', package_path + "/plots/", save=True)
-		plot(range(len(turn_list)), turn_list, "Steps_per_turn", 'Steps per Turn', 'Number of Games', package_path + "/plots/", save=True)		
+		
+
+		plot(range(len(rewards_list)), rewards_list, "Rewards_per_Turn", 'Rewards per Turn', 'Number of Games', package_path + "/src/plots/", save=True)
+		plot(range(len(turn_list)), turn_list, "Steps_per_turn", 'Steps per Turn', 'Number of Games', package_path + "/src/plots/", save=True)		
 
 		print(mean_list)
 		print(stdev_list)

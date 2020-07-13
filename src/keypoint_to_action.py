@@ -23,7 +23,7 @@ class Converter:
 			else:
 				shift = pos_x - self.prev_x
 
-			if abs(shift) < 0.10:
+			if abs(shift) < 0.12:
 				return 0
 			else:
 				# return shift * self.speed
