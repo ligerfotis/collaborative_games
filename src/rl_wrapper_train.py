@@ -16,7 +16,7 @@ import numpy as np
 from utils import plot
 from tqdm import tqdm
 import rospkg
-
+import os
 
 # path = "/home/fligerakis/catkin_ws/src/hand_direction/plots/"
 rospack = rospkg.RosPack()
@@ -40,6 +40,13 @@ class controller:
 		self.act_human_sub = rospy.Subscriber("/rl/action_x", action_msg, self.set_human_agent)
 
 		self.transmit_time_list = []
+
+		self.plot_directory = package_path + "/src/plots/"
+		if not os.path.exists(self.plot_directory):
+			print("Dir %s was not found. Creating it..." %(self.plot_directory))
+			os.makedirs(self.plot_directory)
+		else:
+			print("Dir %s was found." %(self.plot_directory))
 
 	def set_human_agent(self,action_agent):
 		if action_agent.action != 0.0:
@@ -105,7 +112,7 @@ class controller:
 
 					pbar = tqdm(xrange(1, offline_updates_num + 1), unit_scale=1, smoothing=0)
 					for _ in pbar:
-						self.agent.train(verbose=True)
+						self.agent.train(verbose=False)
 
 					# run trials
 					mean_score, stdev_score =  self.test()
@@ -123,14 +130,14 @@ class controller:
 
 		
 
-		plot(range(len(rewards_list)), rewards_list, "Rewards_per_Turn", 'Rewards per Turn', 'Number of Games', package_path + "/src/plots/", save=True)
-		plot(range(len(turn_list)), turn_list, "Steps_per_turn", 'Steps per Turn', 'Number of Games', package_path + "/src/plots/", save=True)		
+		plot(range(len(rewards_list)), rewards_list, "Rewards_per_Turn", 'Rewards per Turn', 'Number of Games', self.plot_directory, save=True)
+		plot(range(len(turn_list)), turn_list, "Steps_per_turn", 'Steps per Turn', 'Number of Games', self.plot_directory, save=True)		
 
 		print(mean_list)
 		print(stdev_list)
 		plt.plot(range(0,MAX_STEPS, UPDATE_INTERVAL), mean_list, 'k')
-		plt.fill_between(range(0,MAX_STEPS, UPDATE_INTERVAL), np.array(mean_list) - np.array(stdev_list),np.array(mean_list) + np.array(stdev_list))
-		plt.savefig( package_path + "/plots/" + "trials")
+		plt.fill_between(range(0,MAX_STEPS, UPDATE_INTERVAL), np.array(mean_list) - np.array(stdev_list), np.array(mean_list) + np.array(stdev_list))
+		plt.savefig( self.plot_directory + "trials")
 		plt.show()
 		
 

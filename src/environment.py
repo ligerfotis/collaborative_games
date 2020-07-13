@@ -372,28 +372,4 @@ class Game:
         pygame.display.quit()
         pygame.quit()
 
-        # self.plot(self.time, self.accel_x_list, "accelaration_x_axis", 'accelaration x-axis','Running time since Game started(msec)', save=True)
-        # self.plot(self.time, self.accel_y_list, "accelaration_y_axis", 'accelaration x-axis','Running time since Game started(msec)', save=True)
-        # self.plot(self.time, self.vel_x_list, "velocity_x_axis", 'accelaration x-axis','Running time since Game started(msec)', save=True)
-        # self.plot(self.time, self.vel_y_list, "velocity_y_axis", 'accelaration x-axis','Running time since Game started(msec)', save=True)
-        # self.turtle_real_y_pos_list.reverse()
-        # self.plot(self.turtle_real_x_pos_list, self.turtle_real_y_pos_list, "turtle_pos", 'y-position','x-position')
-
-    # def game_loop(self):
-    #     while self.running:
-    #         self.play()
-    #     self.endGame()
-
-    # def plot(self, time_elpsd, list, figure_title, y_axis_name, x_axis_name, save=True):       
-    #     plt.figure(figure_title)
-    #     plt.grid()
-    #     # plt.xticks(np.arange(0, time_elpsd[-1], step=500))
-    #     # plt.yticks(np.arange(min(list), max(list), step=0.01))
-    #     plt.plot(time_elpsd, list)
-    #     plt.ylabel(y_axis_name)
-    #     plt.xlabel(x_axis_name)
-    #     if save:
-    #         plt.savefig("/home/liger/catkin_ws/src/hand_direction/" + figure_title)
-    #     else:
-    #         plt.show()
 
