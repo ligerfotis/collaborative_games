@@ -130,8 +130,8 @@ class controller:
 
 		
 
-		plot(range(len(rewards_list)), rewards_list, "Rewards_per_Turn", 'Rewards per Turn', 'Number of Games', self.plot_directory, save=True)
-		plot(range(len(turn_list)), turn_list, "Steps_per_turn", 'Steps per Turn', 'Number of Games', self.plot_directory, save=True)		
+		plot(range(len(rewards_list)), rewards_list, "Rewards_per_game", 'Total Rewards per Game', 'Number of Games', self.plot_directory, save=True)
+		plot(range(len(turn_list)), turn_list, "Steps_per_game", 'Steps per Game', 'Number of Games', self.plot_directory, save=True)		
 
 		print(mean_list)
 		print(stdev_list)
