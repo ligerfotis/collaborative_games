@@ -135,10 +135,12 @@ class controller:
 
 		print(mean_list)
 		print(stdev_list)
-		plt.plot(range(0,MAX_STEPS, UPDATE_INTERVAL), mean_list, 'k')
-		plt.fill_between(range(0,MAX_STEPS, UPDATE_INTERVAL), np.array(mean_list) - np.array(stdev_list), np.array(mean_list) + np.array(stdev_list))
-		plt.savefig( self.plot_directory + "trials")
-		plt.show()
+		plot(range(0,MAX_STEPS, UPDATE_INTERVAL), mean_list, "trials", 'Tests Score', 'Number of Interactions', self.plot_directory, save=True, variance=True, stdev=stdev_list)		
+
+		# plt.plot(range(0,MAX_STEPS, UPDATE_INTERVAL), mean_list, 'k')
+		# plt.fill_between(range(0,MAX_STEPS, UPDATE_INTERVAL), np.array(mean_list) - np.array(stdev_list), np.array(mean_list) + np.array(stdev_list))
+		# plt.savefig( self.plot_directory + "trials")
+		# plt.show()
 		
 
 		print("Average Execution time per interaction: %f milliseconds(stdev: %f). \n" % (mean(interaction_time_list) * 1e3, stdev(interaction_time_list) * 1e3))
