@@ -2,12 +2,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot(time_elpsd, data, figure_title, y_axis_name, x_axis_name, path, save=True, variance=False, stdev=None):
+def plot(time_elpsd, data, figure_title, y_axis_name, x_axis_name, path, save=True, variance=False, stdev=None, color='-k'):
     plt.figure(figure_title)
     plt.grid()
     # plt.xticks(np.arange(0, time_elpsd[-1], step=500))
     # plt.yticks(np.arange(min(list), max(list), step=0.01))
-    plt.plot(time_elpsd, data)
+    plt.plot(time_elpsd, data, color)
     plt.ylabel(y_axis_name)
     plt.xlabel(x_axis_name)
     if variance:

@@ -61,7 +61,9 @@ class controller:
 		mean_list = []
 		stdev_list = []
 		global_time = rospy.get_rostime().to_sec()
-
+		alpha_values = []
+		policy_loss_list = []
+		value_loss_list = []
 		self.resetGame()
 
 		for exp in range(MAX_STEPS+1):
@@ -69,7 +71,7 @@ class controller:
 			if self.game.running:
 				start_interaction_time = time.time()
 
-				self.game.experiment = expa
+				self.game.experiment = exp
 				self.turns += 1
 
 				state = self.game.getState()
@@ -98,7 +100,10 @@ class controller:
 						print("\nStarting updates")
 						first_update = False
 
-					self.agent.train()
+					[alpha, policy_loss, value_loss] = self.agent.train()
+					alpha_values.append(alpha.item())
+					policy_loss_list.append(policy_loss.item())
+					value_loss_list.append(value_loss.item())
 
 					interaction_training_time_list.append(time.time() - start_interaction_time)
 
@@ -110,7 +115,10 @@ class controller:
 
 					pbar = tqdm(xrange(1, offline_updates_num + 1), unit_scale=1, smoothing=0)
 					for _ in pbar:
-						self.agent.train(verbose=False)
+						[alpha, policy_loss, value_loss] = self.agent.train(verbose=False)
+						alpha_values.append(alpha.item())
+						policy_loss_list.append(policy_loss.item())
+						value_loss_list.append(value_loss.item())
 
 					# run trials
 					mean_score, stdev_score =  self.test()
@@ -126,7 +134,11 @@ class controller:
 				# reset game
 				self.resetGame()
 
-		
+
+		plot(range(len(alpha_values)), alpha_values, "alpha_values", 'Alpha Value', 'Number of Gradient Updates', self.plot_directory, save=True)
+		plot(range(len(policy_loss_list)), policy_loss_list, "policy_loss", 'Policy loss', 'Number of Gradient Updates', self.plot_directory, save=True)
+		plot(range(len(value_loss_list)), value_loss_list, "value_loss_list", 'Policy loss', 'Number of Gradient Updates', self.plot_directory, save=True)
+
 
 		plot(range(len(rewards_list)), rewards_list, "Rewards_per_game", 'Total Rewards per Game', 'Number of Games', self.plot_directory, save=True)
 		plot(range(len(turn_list)), turn_list, "Steps_per_game", 'Steps per Game', 'Number of Games', self.plot_directory, save=True)		

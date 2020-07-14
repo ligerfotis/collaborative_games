@@ -211,6 +211,8 @@ class SAC:
 
             torch.cuda.empty_cache()
 
+            return [alpha, policy_loss, value_loss]
+
         except KeyboardInterrupt:
             print("Exception in training")
 
