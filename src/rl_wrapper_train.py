@@ -45,8 +45,6 @@ class controller:
 		if not os.path.exists(self.plot_directory):
 			print("Dir %s was not found. Creating it..." %(self.plot_directory))
 			os.makedirs(self.plot_directory)
-		else:
-			print("Dir %s was found." %(self.plot_directory))
 
 	def set_human_agent(self,action_agent):
 		if action_agent.action != 0.0:
@@ -71,7 +69,7 @@ class controller:
 			if self.game.running:
 				start_interaction_time = time.time()
 
-				self.game.experiment = exp
+				self.game.experiment = expa
 				self.turns += 1
 
 				state = self.game.getState()
