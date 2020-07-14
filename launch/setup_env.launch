@@ -3,9 +3,9 @@
 
 	<node pkg="hand_direction" type="rl_wrapper_train.py" respawn="false" name="Environment" output="screen">
 	  </node>
-
+<!-- 
 	<node pkg="hand_direction" type="keypoint_to_action.py" respawn="false" name="Human_Hand" output="screen">
-	</node>
+	</node> -->
 
 	<node pkg="hand_direction" type="keypress_xy.py" respawn="false" name="Keyboard" output="screen">
 	</node>

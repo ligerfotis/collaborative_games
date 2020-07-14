@@ -13,7 +13,7 @@ import numpy as np
 from hyperparams_ur10 import MAX_STEPS
 import rospkg
 
-accel_rate_x = 1 * 1e-3
+accel_rate_x = 5 * 1e-3
 accel_rate_y = 5 * 1e-3
 
 
@@ -226,8 +226,8 @@ class Game:
                 pygame.quit()
                 exit(0)
 
-        self.accel_x += x_data * accel_rate_x
-        self.accel_y += y_data * accel_rate_y
+        self.accel_x = x_data * accel_rate_x
+        self.accel_y = y_data * accel_rate_y
         
         # print("Action: %f.\n Accel: %f.\nVel: %f." % (data[1], self.accel_y, self.vel_y))
         self.vel_x += self.accel_x
