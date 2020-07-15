@@ -94,14 +94,16 @@ class SAC:
                 print("No checkpoint found at '{}'".format(package_path+"/src/scripts/checkpoints_human/agent.pth"))
 
 
-    def update_rw_state(self, state, reward, action, next_state, final_state):
-        state = torch.tensor(state, dtype=torch.float32).to(self.device)
-        next_state = torch.tensor(next_state).to(self.device)
+    def update_rw_state(self, episode):
+        # episode = [state, reward, agent_act, next_state, done]
+
+        state = torch.tensor(episode[0], dtype=torch.float32).to(self.device)
+        next_state = torch.tensor(episode[3]).to(self.device)
         self.D.append({'state': state.unsqueeze(0),
-                       'action': action,
-                       'reward': torch.tensor([reward], dtype=torch.float32, device=self.device),
+                       'action': episode[2],
+                       'reward': torch.tensor([episode[1]], dtype=torch.float32, device=self.device),
                        'next_state': next_state.unsqueeze(0),
-                       'done': torch.tensor([final_state], dtype=torch.float32, device=self.device)})
+                       'done': torch.tensor([episode[4]], dtype=torch.float32, device=self.device)})
 
     def next_action(self, state, stochastic=True):
         start_time = time.time()
@@ -127,7 +129,7 @@ class SAC:
     def train(self, sample=None, verbose=True):
         try:
             if sample is None:
-                # Randomly sample a batch of transitions B = {(s, a, r, s', d)} from D
+                # Randomly sample a batch of transitions B = {(s, r, a, s', d)} from D
                 batch = random.sample(self.D, BATCH_SIZE)
                 batch = dict((k, torch.cat([d[k] for d in batch], dim=0)) for k in batch[0].keys())
             else:
@@ -137,9 +139,9 @@ class SAC:
                        'action': sample[2],
                        'reward': torch.tensor([sample[1]], dtype=torch.float32, device=self.device),
                        'next_state': next_state.unsqueeze(0),
-                       'done': torch.tensor([sample[5]], dtype=torch.float32, device=self.device)}
-                print("single batch")
-                print(batch)
+                       'done': torch.tensor([sample[4]], dtype=torch.float32, device=self.device)}
+                # print("single batch")
+                # print(batch)
 
             # Compute targets for Q and V functions
             y_q = batch['reward'] + DISCOUNT * (1 - batch['done']) * self.target_value_critic(

@@ -10,7 +10,7 @@ from std_srvs.srv import Empty,EmptyResponse, Trigger
 import time
 from statistics import mean, stdev
 from sac import SAC
-from hyperparams_ur10 import OFF_POLICY_BATCH_SIZE as BATCH_SIZE, DISCOUNT, ENTROPY_WEIGHT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, UPDATE_INTERVAL, UPDATE_START, SAVE_INTERVAL
+from hyperparams_ur10 import OFF_POLICY_BATCH_SIZE as BATCH_SIZE, DISCOUNT, ENTROPY_WEIGHT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, UPDATE_INTERVAL, UPDATE_START, SAVE_INTERVAL, OFFLINE_UPDATES, TEST_NUM, ACTION_DURATION
 import matplotlib.pyplot as plt
 import numpy as np
 from utils import plot
@@ -22,10 +22,10 @@ import os
 rospack = rospkg.RosPack()
 package_path = rospack.get_path("hand_direction")
 
-offline_updates_num = 20000
-test_num = 10
+offline_updates_num = OFFLINE_UPDATES
+test_num = TEST_NUM
 
-action_duration = 0.2 # 200 milliseconds
+action_duration = ACTION_DURATION # 200 milliseconds
 
 class controller:
 
@@ -86,9 +86,10 @@ class controller:
 				reward = self.game.getReward()
 				next_state = self.game.getState()
 				done = self.game.finished
-				# episode = state, reward, agent_act, next_state, done
+				episode = [state, reward, agent_act, next_state, done]
 
-				self.agent.update_rw_state(state, reward, agent_act, next_state, done)
+				self.agent.update_rw_state(episode)
+				
 				self.total_reward_per_game += reward 
 
 				interaction_time_list.append(time.time() - start_interaction_time)
@@ -100,7 +101,7 @@ class controller:
 						print("\nStarting updates")
 						first_update = False
 
-					[alpha, policy_loss, value_loss] = self.agent.train()
+					[alpha, policy_loss, value_loss] = self.agent.train(sample=episode)
 					alpha_values.append(alpha.item())
 					policy_loss_list.append(policy_loss.item())
 					value_loss_list.append(value_loss.item())
@@ -134,23 +135,23 @@ class controller:
 				# reset game
 				self.resetGame()
 
+		np.savetxt(self.plot_directory + 'alpha_values.csv', alpha_values, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + 'policy_loss.csv', policy_loss_list, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + 'value_loss.csv', value_loss_list, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + 'rewards_list.csv', rewards_list, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + 'turn_list.csv', turn_list, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + 'trials.csv', mean_list, delimiter=',', fmt='%f')
+
 
 		plot(range(len(alpha_values)), alpha_values, "alpha_values", 'Alpha Value', 'Number of Gradient Updates', self.plot_directory, save=True)
 		plot(range(len(policy_loss_list)), policy_loss_list, "policy_loss", 'Policy loss', 'Number of Gradient Updates', self.plot_directory, save=True)
-		plot(range(len(value_loss_list)), value_loss_list, "value_loss_list", 'Policy loss', 'Number of Gradient Updates', self.plot_directory, save=True)
-
-
+		plot(range(len(value_loss_list)), value_loss_list, "value_loss_list", 'Value loss', 'Number of Gradient Updates', self.plot_directory, save=True)
 		plot(range(len(rewards_list)), rewards_list, "Rewards_per_game", 'Total Rewards per Game', 'Number of Games', self.plot_directory, save=True)
-		plot(range(len(turn_list)), turn_list, "Steps_per_game", 'Steps per Game', 'Number of Games', self.plot_directory, save=True)		
+		plot(range(len(turn_list)), turn_list, "Steps_per_game", 'Turns per Game', 'Number of Games', self.plot_directory, save=True)		
 
 		print(mean_list)
 		print(stdev_list)
-		plot(range(0,MAX_STEPS, UPDATE_INTERVAL), mean_list, "trials", 'Tests Score', 'Number of Interactions', self.plot_directory, save=True, variance=True, stdev=stdev_list)		
-
-		# plt.plot(range(0,MAX_STEPS, UPDATE_INTERVAL), mean_list, 'k')
-		# plt.fill_between(range(0,MAX_STEPS, UPDATE_INTERVAL), np.array(mean_list) - np.array(stdev_list), np.array(mean_list) + np.array(stdev_list))
-		# plt.savefig( self.plot_directory + "trials")
-		# plt.show()
+		plot(range(UPDATE_INTERVAL, MAX_STEPS+UPDATE_INTERVAL, UPDATE_INTERVAL), mean_list, "trials", 'Tests Score', 'Number of Interactions', self.plot_directory, save=True, variance=True, stdev=stdev_list)		
 		
 
 		print("Average Execution time per interaction: %f milliseconds(stdev: %f). \n" % (mean(interaction_time_list) * 1e3, stdev(interaction_time_list) * 1e3))

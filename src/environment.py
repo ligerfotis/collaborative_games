@@ -10,7 +10,7 @@ from pygame.locals import *
 from hand_direction.msg import action_agent
 import matplotlib.pyplot as plt
 import numpy as np
-from hyperparams_ur10 import MAX_STEPS
+from hyperparams_ur10 import MAX_STEPS, TIME_PER_TURN
 import rospkg
 
 accel_rate_x = 5 * 1e-3
@@ -43,7 +43,7 @@ def quit_game():
 class Game:
     def __init__(self):
         self.experiment = 0
-        self.TIME = 40
+        self.TIME = TIME_PER_TURN
         self.start_time = None
         self.time_elapsed = 0
         # 2 - Initialize the game
@@ -279,12 +279,12 @@ class Game:
 
 
     def paused(self):
+        pause_start_time = time.time()
         largeText = pygame.font.SysFont("comicsansms",115)
         TextSurf, TextRect = text_objects("Paused", largeText)
         TextRect.center = ((self.width/2),(self.height/2))
         self.screen.blit(TextSurf, TextRect)
         
-
         while self.pause:
             for event in pygame.event.get():
 
@@ -307,6 +307,8 @@ class Game:
 
             pygame.display.update()
             self.clock.tick(15)
+        pause_duration = time.time() - pause_start_time
+        self.start_time += pause_duration
 
     def waitScreen(self, msg1, msg2=None, duration=None):
         self.screen.fill(WHITE)
@@ -345,7 +347,7 @@ class Game:
 
     def getReward(self):
         if self.finished:
-            return 100
+            return 10
         # elif not (700 - 64 < self.turtle_pos[0] + self.turtle_pos[1] < 900 - 64):
         #     return -10
         else:
