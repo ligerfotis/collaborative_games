@@ -35,12 +35,12 @@ class Converter:
 				# self.start_time = time.time()
 				#return shift
 				if shift < 0:
-					return -1
-				else:
 					return 1
+				else:
+					return -1
 
 	def normalize(self, x_data):
-		if  0 < x_data < 0.35:
+		if  0 < abs(x_data) < 0.35:
 			return x_data
 		else:
 			return 0
@@ -48,8 +48,11 @@ class Converter:
 	def callback(self, data):
 		h = std_msgs.msg.Header()
 		h.stamp = rospy.Time.now() 
-
+		'''
 		pos_x = data.keypoints[0].points.point.y # yes it is "y" because of the setup in lab
+		'''
+		pos_x = - data.keypoints[0].points.point.x
+		
 		shift = self.getShift(self.normalize(pos_x))
 		
 		act = action_msg()
