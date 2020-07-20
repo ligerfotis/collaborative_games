@@ -75,6 +75,7 @@ class controller:
 		self.resetGame()
 
 		for exp in range(MAX_STEPS+1):
+			self.check_goal_reached()
 
 			if self.game.running:
 				start_interaction_time = time.time()
@@ -82,7 +83,7 @@ class controller:
 				self.game.experiment = exp
 				self.turns += 1
 
-				state = self.game.getState()
+				state = self.getState()
 				agent_act = self.agent.next_action(state)
 
 				self.publish_agent_action(agent_act)
@@ -93,8 +94,8 @@ class controller:
 				while time.time() - tmp_time < action_duration :
 					exec_time = self.game.play([act_human, agent_act.item()])
 					
-				reward = self.game.getReward()
-				next_state = self.game.getState()
+				reward = self.getReward()
+				next_state = self.getState()
 				done = self.game.finished
 				episode = [state, reward, agent_act, next_state, done]
 
@@ -143,7 +144,7 @@ class controller:
 					self.mean_list.append(mean(score_list))
 					self.stdev_list.append(stdev(score_list))
 					self.trials_list.append(score_list)
-					
+
 					self.resetGame()
 			else:
 				self.turn_list.append(self.turns)
@@ -173,7 +174,7 @@ class controller:
 			while self.game.running:
 				self.game.experiment = "Test: " + str(game+1)
 
-				state = self.game.getState()
+				state = self.getState()
 				agent_act = self.agent.next_action(state, stochastic=False) # take only the mean
 				# print(agent_act)
 				tmp_time = time.time()
@@ -181,11 +182,36 @@ class controller:
 					exec_time = self.game.play([self.action_human, agent_act.item()], total_games=test_num)
 
 				score -= 1
+				self.check_goal_reached()
 
 			score_list.append(score)
 
 
 		return score_list
+
+	def getReward(self):
+		if self.game.finished:
+			return 10
+		else:
+			return -1
+
+	def getState(self):
+		return [self.game.accel_x, self.game.accel_y, self.game.turtle_pos[0], self.game.turtle_pos[1], self.game.vel_x, self.game.vel_y]
+
+	def check_goal_reached(self, name="turtle"):
+		if name is "turtle":
+			if self.game.time_dependend and self.game.time_elapsed >= self.game.TIME:
+				self.game.running = 0
+				self.game.exitcode = 1
+				self.game.timedOut = True
+				self.game.finished = True
+
+			if self.game.width - 40 > self.game.turtle_pos[0] > self.game.width - (80 + 40) \
+			and 20 < self.game.turtle_pos[1] < (80 + 60 / 2 - 32):
+				self.game.running = 0
+				self.game.exitcode = 1
+				self.game.finished = True  # This means final state achieved
+
 
 	def resetGame(self, msg=None):
 		wait_time = 3

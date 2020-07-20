@@ -264,16 +264,17 @@ class Game:
 
         # print([self.vel_x, self.vel_y])
         # 10 - Win/Lose check
-        if self.time_dependend and self.time_elapsed >= self.TIME:
-            self.running = 0
-            self.exitcode = 1
-            self.timedOut = True
+        # if self.time_dependend and self.time_elapsed >= self.TIME:
+        #     self.running = 0
+        #     self.exitcode = 1
+        #     self.timedOut = True
+        #     self.finished = True
 
-        if self.width - 40 > self.turtle_pos[0] > self.width - (80 + 40) \
-                and 20 < self.turtle_pos[1] < (80 + 60 / 2 - 32):
-            self.running = 0
-            self.exitcode = 1
-            self.finished = True  # This means final state achieved
+        # if self.width - 40 > self.turtle_pos[0] > self.width - (80 + 40) \
+        #         and 20 < self.turtle_pos[1] < (80 + 60 / 2 - 32):
+        #     self.running = 0
+        #     self.exitcode = 1
+        #     self.finished = True  # This means final state achieved
 
         return time.time() - start_time
 
@@ -344,19 +345,6 @@ class Game:
 
                 pygame.display.flip()
                 time.sleep(1)
-
-    def getReward(self):
-        if self.finished:
-            return 10
-        # elif not (700 - 64 < self.turtle_pos[0] + self.turtle_pos[1] < 900 - 64):
-        #     return -10
-        else:
-            return -1
-
-    def getState(self):
-        # [x position. y position, detected wrist x position]
-        # Size of observation space is 2
-        return [self.accel_x, self.accel_y, self.turtle_pos[0], self.turtle_pos[1], self.vel_x, self.vel_y]
 
     def endGame(self):
         if self.exitcode == 1:
