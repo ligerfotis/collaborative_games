@@ -55,6 +55,7 @@ class controller:
 		self.critics_lr_list = []
 		self.value_critic_lr_list = []
 		self.actor_lr_list = []
+		self.trials_list = []
 
 		self.plot_directory = package_path + "/src/plots/"
 		if not os.path.exists(self.plot_directory):
@@ -137,11 +138,12 @@ class controller:
 						self.actor_lr_list.append(actor_lr)
 
 					# run trials
-					mean_score, stdev_score =  self.test()
+					score_list =  self.test()
 
-					self.mean_list.append(mean_score)
-					self.stdev_list.append(stdev_score)
-
+					self.mean_list.append(mean(score_list))
+					self.stdev_list.append(stdev(score_list))
+					self.trials_list.append(score_list)
+					
 					self.resetGame()
 			else:
 				self.turn_list.append(self.turns)
@@ -182,7 +184,8 @@ class controller:
 
 			score_list.append(score)
 
-		return [mean(score_list), stdev(score_list)]
+
+		return score_list
 
 	def resetGame(self, msg=None):
 		wait_time = 3
@@ -204,6 +207,8 @@ class controller:
 		np.savetxt(self.plot_directory + 'critics_lr_list.csv', self.critics_lr_list, delimiter=',', fmt='%f')
 		np.savetxt(self.plot_directory + 'value_critic_lr_list.csv', self.value_critic_lr_list, delimiter=',', fmt='%f')
 		np.savetxt(self.plot_directory + 'actor_lr_list.csv', self.actor_lr_list, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + 'trials_list.csv', self.trials_list, delimiter=',', fmt='%f')
+
 
 
 		plot(range(len(self.alpha_values)), self.alpha_values, "alpha_values", 'Alpha Value', 'Number of Gradient Updates', self.plot_directory, save=True)

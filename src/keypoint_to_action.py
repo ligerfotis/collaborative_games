@@ -33,10 +33,11 @@ class Converter:
 				# if self.start_time is not None:
 				# 	print(time.time() - self.start_time)
 				# self.start_time = time.time()
+				#return shift
 				if shift < 0:
-					return -1 * shift
+					return -1
 				else:
-					return 1 * shift
+					return 1
 
 	def normalize(self, x_data):
 		if  0 < x_data < 0.35:
