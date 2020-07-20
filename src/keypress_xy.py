@@ -13,6 +13,8 @@ from statistics import mean
 # escape = '\x1b'
 # exit = '\x03'
 
+offset = 5
+
 UP = 'w'
 DOWN = 's'
 LEFT = 'a'
@@ -100,11 +102,11 @@ class KeyboardPublisher:
 		h.stamp = rospy.Time.now() 
 		act.header = h
 		if action == 1 or action == -1:
-			act.action = action
+			act.action = action * offset
 			pub_y.publish(act)
 			self.total_times.append(rospy.get_rostime().to_sec()-self.start_time)
 		elif action == 2 or action == -2:
-			act.action = action/2
+			act.action = action/2 * offset
 			pub_x.publish(act)
 
 			self.total_times.append(rospy.get_rostime().to_sec()-self.start_time)

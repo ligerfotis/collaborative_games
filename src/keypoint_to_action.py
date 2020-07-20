@@ -6,6 +6,10 @@ from hand_direction.msg import action_msg
 import numpy as np
 from std_msgs.msg import Float32
 import std_msgs
+import time
+
+
+offset = 0.04
 
 class Converter:
 
@@ -14,8 +18,7 @@ class Converter:
 		self.keypoint_sub = rospy.Subscriber("/topic_transform", Keypoint3d_list, self.callback)
 		self.action_human_pub = rospy.Publisher('/rl/action_x', action_msg, queue_size = 10)
 		self.prev_x = None
-		# self.speed = 1500
-		
+		self.start_time = None
 
 	def getShift(self, pos_x):
 			if self.prev_x == None:
@@ -23,15 +26,17 @@ class Converter:
 			else:
 				shift = pos_x - self.prev_x
 
-			if abs(shift) < 0.12:
+			if abs(shift) < offset:
 				return 0
 			else:
-				# return shift * self.speed
 				self.prev_x = pos_x
+				# if self.start_time is not None:
+				# 	print(time.time() - self.start_time)
+				# self.start_time = time.time()
 				if shift < 0:
-					return -1
+					return -1 * shift
 				else:
-					return 1
+					return 1 * shift
 
 	def normalize(self, x_data):
 		if  0 < x_data < 0.35:
@@ -47,7 +52,7 @@ class Converter:
 		shift = self.getShift(self.normalize(pos_x))
 		
 		act = action_msg()
-		act.action = np.asarray([float(shift)])
+		act.action = shift
 		act.header = h
 		
 		self.action_human_pub.publish(act)

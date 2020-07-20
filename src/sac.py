@@ -6,7 +6,7 @@ import torch
 from tqdm import tqdm
 
 from hyperparams_ur10 import OFF_POLICY_BATCH_SIZE as BATCH_SIZE, DISCOUNT, ENTROPY_WEIGHT, HIDDEN_SIZE, LEARNING_RATE, \
-    MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, UPDATE_INTERVAL, UPDATE_START, SAVE_INTERVAL
+    MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, UPDATE_INTERVAL, UPDATE_START, SAVE_INTERVAL, EXP_DECAY_LR, DECAY
 from models_ur10_human import Critic, SoftActor, create_target_network, update_target_network
 from hand_direction.msg import reward_observation, action_agent, action_human
 # import rospy
@@ -21,6 +21,8 @@ import os
 resume = False
 rospack = rospkg.RosPack()
 package_path = rospack.get_path("hand_direction")
+
+decayRate = EXP_DECAY_LR
 
 def next_action_random():
     rand = np.random.randint(low=1, high=11)
@@ -60,16 +62,26 @@ class SAC:
         self.targets_reached_first500 = 0
         self.targets_reached = 0
         self.target_value_critic = create_target_network(self.value_critic).to(self.device)
+        
         self.actor_optimiser = optim.Adam(self.actor.parameters(), lr=LEARNING_RATE)
+        self.actor_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=self.actor_optimiser, gamma=decayRate)
+
         self.critics_optimiser = optim.Adam(list(self.critic_1.parameters()) + list(self.critic_2.parameters()),
                                             lr=LEARNING_RATE)
+        self.critics_scheduler =  torch.optim.lr_scheduler.ExponentialLR( optimizer=self.critics_optimiser, gamma=decayRate)
+
         self.value_critic_optimiser = optim.Adam(self.value_critic.parameters(), lr=LEARNING_RATE)
+        self.value_critic_scheduler =  torch.optim.lr_scheduler.ExponentialLR( optimizer= self.value_critic_optimiser, gamma=decayRate)
+
         self.D = deque(maxlen=REPLAY_SIZE)
         # Automatic entropy tuning init
         self.target_entropy = -np.prod(self.action_space).item()
         self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=LEARNING_RATE)
-        self.lr = None
+        
+        # self.critics_lr = LEARNING_RATE
+        # self.value_critic_lr = LEARNING_RATE
+        # self.actor_optimiser_lr = LEARNING_RATE
 
         self.save_count = 0
 
@@ -172,19 +184,22 @@ class SAC:
             self.critics_optimiser.zero_grad()
             value_loss.backward()
             self.critics_optimiser.step()
+            critics_lr = self.critics_optimiser.state_dict()["param_groups"][0]["lr"]
 
             # Update V-function by one step of gradient descent
             value_loss = (self.value_critic(batch['state']) - y_v).pow(2).mean()
             self.value_critic_optimiser.zero_grad()
             value_loss.backward()
             self.value_critic_optimiser.step()
+            value_critic_lr = self.value_critic_optimiser.state_dict()["param_groups"][0]["lr"]
+
 
             # Update policy by one step of gradient ascent
             policy_loss = (weighted_sample_entropy - self.critic_1(batch['state'], action_update)).mean()
             self.actor_optimiser.zero_grad()
             policy_loss.backward()
             self.actor_optimiser.step()
-            self.lr = self.critics_optimiser.state_dict()["param_groups"][0]["lr"]
+            actor_optimiser_lr = self.actor_optimiser.state_dict()["param_groups"][0]["lr"]
 
 
             # Update target value network
@@ -193,6 +208,12 @@ class SAC:
             # Saving policy
             if self.save_count == SAVE_INTERVAL:
                 self.save_count = 0
+
+                if DECAY:
+                    self.actor_scheduler.step()
+                    self.critics_scheduler.step()
+                    self.value_critic_scheduler.step()
+
                 # Reset
                 if verbose:
                     print("Saving")
@@ -213,7 +234,7 @@ class SAC:
 
             torch.cuda.empty_cache()
 
-            return [alpha, policy_loss, value_loss]
+            return [alpha, policy_loss, value_loss, critics_lr, value_critic_lr, actor_optimiser_lr]
 
         except KeyboardInterrupt:
             print("Exception in training")

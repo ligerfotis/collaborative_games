@@ -8,39 +8,26 @@ from keypoint_3d_matching_msgs.msg import Keypoint3d_list
 from hand_direction.msg import observation, action_agent, reward_observation, action_msg
 from std_srvs.srv import Empty,EmptyResponse, Trigger
 import time
-from statistics import mean, stdev
-from sac import SAC
-from hyperparams_ur10 import OFF_POLICY_BATCH_SIZE as BATCH_SIZE, DISCOUNT, ENTROPY_WEIGHT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, UPDATE_INTERVAL, UPDATE_START, SAVE_INTERVAL, OFFLINE_UPDATES, TEST_NUM, ACTION_DURATION
-import matplotlib.pyplot as plt
-import numpy as np
-from utils import plot
-from tqdm import tqdm
-import rospkg
-import os
-
-# path = "/home/fligerakis/catkin_ws/src/hand_direction/plots/"
-rospack = rospkg.RosPack()
-package_path = rospack.get_path("hand_direction")
-
-offline_updates_num = OFFLINE_UPDATES
-test_num = TEST_NUM
-
-action_duration = ACTION_DURATION # 200 milliseconds
+from statistics import mean 
 
 class controller:
 
 	def __init__(self):
-		# print("init")
+		print("init")
+		self.experiments_num = 10
+		# self.human_sub = rospy.Subscriber("/RW_x_direction", Int16, self.simulate)
 		self.game = Game()
-		self.agent = SAC()
-
 		self.action_human = 0.0
 		self.action_agent = 0.0
+		# # self.human_sub = rospy.Subscriber("/rl/hand_action_x", action_msg, self.set_action_human)
+		# self.human_sub = rospy.Subscriber("/rl/action_x", action_msg, self.set_action_human)
+		self.agent_sub = rospy.Subscriber("/rl/total_action", action_agent, 
+			self.set_action_agent)
 
-		self.act_human_sub = rospy.Subscriber("/rl/action_x", action_msg, self.set_human_agent)
-
-		self.act_agent_pub = rospy.Publisher('/rl/action_y', action_msg, queue_size = 10)
-
+		# self.reward_pub = rospy.Publisher('/rl/reward', Int16, queue_size = 10)
+		self.obs_robot_pub = rospy.Publisher('/rl/game_response', reward_observation, 
+			queue_size = 10, latch=True)
+		
 		self.transmit_time_list = []
 
 		self.rewards_list = []
@@ -61,11 +48,30 @@ class controller:
 			print("Dir %s was not found. Creating it..." %(self.plot_directory))
 			os.makedirs(self.plot_directory)
 
-	def set_human_agent(self,action_agent):
+	def set_action_agent(self, action_agent):
+		self.prev_state = self.game.getState()
+		self.action_agent = action_agent.action[1]
+		self.action_human = action_agent.action[0]
+		self.transmit_time_list.append(rospy.get_rostime().to_sec()  - action_agent.header.stamp.to_sec())
+
+	def set_human_agent(self, action_agent):
 		if action_agent.action != 0.0:
 			self.action_human = action_agent.action
 			self.transmit_time_list.append(rospy.get_rostime().to_sec()  - action_agent.header.stamp.to_sec())
 
+
+	def publish_reward_and_observations(self):
+		h = std_msgs.msg.Header()
+		h.stamp = rospy.Time.now() 
+
+		new_obs = reward_observation()
+		new_obs.header = h
+		new_obs.observations = self.game.getState()
+		new_obs.prev_state = self.prev_state
+		new_obs.final_state = self.game.finished
+		new_obs.reward = self.game.getReward()
+
+		self.obs_robot_pub.publish(new_obs)
 
 	def game_loop(self):
 		first_update = True
@@ -83,8 +89,6 @@ class controller:
 
 				state = self.game.getState()
 				agent_act = self.agent.next_action(state)
-
-				self.publish_agent_action(agent_act)
 
 				tmp_time = time.time()
 				act_human = self.action_human
@@ -152,7 +156,7 @@ class controller:
 
 		self.save_and_plot_stats()
 		
-		print("Average Human Action Transmission time per interaction: %f milliseconds(stdev: %f). \n" % (mean(self.transmit_time_list) * 1e3, stdev(self.transmit_time_list) * 1e3))
+		
 		print("Average Execution time per interaction: %f milliseconds(stdev: %f). \n" % (mean(self.interaction_time_list) * 1e3, stdev(self.interaction_time_list) * 1e3))
 		print("Average Execution time per interaction and online update: %f milliseconds(stdev: %f). \n" % (mean(self.interaction_training_time_list) * 1e3, stdev(self.interaction_training_time_list) * 1e3))
 
@@ -189,6 +193,7 @@ class controller:
 		self.game.waitScreen(msg1="Put Right Wrist on starting point.", msg2=msg, duration=wait_time)
 		self.game = Game()
 		self.action_human = 0.0
+		self.action_agent = 0.0
 		self.game.start_time = time.time()
 		self.total_reward_per_game = 0
 		self.turns = 0
@@ -218,15 +223,6 @@ class controller:
 
 		plot(range(UPDATE_INTERVAL, MAX_STEPS+UPDATE_INTERVAL, UPDATE_INTERVAL), self.mean_list, "trials", 'Tests Score', 'Number of Interactions', self.plot_directory, save=True, variance=True, stdev=self.stdev_list)		
 
-	def publish_agent_action(self, agent_act):
-		h = std_msgs.msg.Header()
-		h.stamp = rospy.Time.now() 
-
-		act = action_msg()
-		act.action = agent_act
-		act.header = h
-		
-		self.act_agent_pub.publish(act)
 
 if __name__ == '__main__':
 	rospy.init_node('rl_wrapper', anonymous=True)
