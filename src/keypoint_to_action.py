@@ -9,7 +9,7 @@ import std_msgs
 import time
 
 
-offset = 0.04
+offset = 0.07
 
 class Converter:
 
@@ -22,7 +22,9 @@ class Converter:
 
 	def getShift(self, pos_x):
 			if self.prev_x == None:
-				self.prev_x = shift = pos_x
+				self.prev_x = pos_x
+				shift = 0
+				# shift = pos_x
 			else:
 				shift = pos_x - self.prev_x
 
@@ -33,7 +35,7 @@ class Converter:
 				# if self.start_time is not None:
 				# 	print(time.time() - self.start_time)
 				# self.start_time = time.time()
-				#return shift
+				# return shift
 				if shift < 0:
 					return 1
 				else:
@@ -51,16 +53,16 @@ class Converter:
 		'''
 		pos_x = data.keypoints[0].points.point.y # yes it is "y" because of the setup in lab
 		'''
-		pos_x = - data.keypoints[0].points.point.x
+		pos_x = - data.keypoints[0].points.point.y
 		
 		shift = self.getShift(self.normalize(pos_x))
-		
-		act = action_msg()
-		act.action = shift
-		act.header = h
-		
-		self.action_human_pub.publish(act)
-		
+		if shift != 0:
+			act = action_msg()
+			act.action = shift
+			act.header = h
+			
+			self.action_human_pub.publish(act)
+			
 
 if __name__ == '__main__':
 	rospy.init_node('keypoint_to_action', anonymous=True)

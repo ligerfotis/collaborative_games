@@ -14,8 +14,8 @@ from hyperparams_ur10 import MAX_STEPS, TIME_PER_TURN
 import rospkg
 import random
 
-accel_rate_x = 5 * 1e-3
-accel_rate_y = 5 * 1e-3
+accel_rate_x = 3 * 1e-3
+accel_rate_y = 3 * 1e-3
 
 
 backgroundColor = (255, 255, 255)

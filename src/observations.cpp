@@ -5,7 +5,8 @@
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/Vector3.h>
 #include <geometry_msgs/Quaternion.h>
-#include <hrc_msgs/observations.h>
+// #include <hrc_msgs/observations.h>
+#include <hand_direction/msg/observations.h>
 #include <tf/transform_datatypes.h>
 #include <tf/tf.h>
 #include <ros/console.h>
@@ -19,7 +20,7 @@ int main(int argc, char** argv)
 
 // Publisher object and topic it publishes to
   ros::Publisher observations =
-  node.advertise<hrc_msgs::observations>("/observations", 10);
+  node.advertise<hand_direction::msg::observations>("/observations", 10);
 
 // Initializing observation variables
   // Robot`s tray rotation around x with respect to world:
@@ -55,7 +56,7 @@ int main(int argc, char** argv)
   // Human`s tray angular velocity around z with respect to world:
   double human_psi_dot;
 
-  hrc_msgs::observations obs;
+  hand_direction/msg::observations_robot obs;
 
 // Initialize listener
   tf::TransformListener listener;
@@ -74,10 +75,10 @@ int main(int argc, char** argv)
 // Wait for transforms
   try{
     ros::Time now = ros::Time::now();
-    listener.waitForTransform("/world", "/Human",
-                            now, ros::Duration(3.0));
-    listener.waitForTransform("/tray", "/Ball",
-                            now, ros::Duration(3.0));
+    // listener.waitForTransform("/world", "/Human",
+    //                         now, ros::Duration(3.0));
+    // listener.waitForTransform("/tray", "/Ball",
+    //                         now, ros::Duration(3.0));
     listener.waitForTransform("/world", "/tray",
                             now, ros::Duration(3.0));
   }
@@ -87,24 +88,24 @@ int main(int argc, char** argv)
   }
 
 // Initial ball position for velocity calculations
-  try{
-    listener.lookupTransform("/tray", "/Ball",
-                           ros::Time(0), ball_transform);
-     }
-  catch (tf::TransformException &ex) {
-    ROS_ERROR("%s",ex.what());
-    ros::Duration(1.0).sleep();
-  }
+  // try{
+  //   listener.lookupTransform("/tray", "/Ball",
+  //                          ros::Time(0), ball_transform);
+  //    }
+  // catch (tf::TransformException &ex) {
+  //   ROS_ERROR("%s",ex.what());
+  //   ros::Duration(1.0).sleep();
+  // }
 // Initializing translation of ball in tray frame
-  ball_x = ball_transform.getOrigin().x();
-  ball_y = ball_transform.getOrigin().y();
+  // ball_x = ball_transform.getOrigin().x();
+  // ball_y = ball_transform.getOrigin().y();
 
 // Initializing robot`s tray rotation
   try{
   listener.lookupTransform("/world", "/tray",
                            ros::Time(0), robot_tray_transform);
-  listener.lookupTransform("/world", "/Human",
-                          ros::Time(0), human_tray_transform);
+  // listener.lookupTransform("/world", "/Human",
+  //                         ros::Time(0), human_tray_transform);
      }
   catch (tf::TransformException &ex) {
     ROS_ERROR("%s",ex.what());
@@ -112,18 +113,18 @@ int main(int argc, char** argv)
      }
 // Extracting rotations
   robot_tray = robot_tray_transform.getRotation();
-  human_tray = human_tray_transform.getRotation();
+  // human_tray = human_tray_transform.getRotation();
   tf::Matrix3x3 m0(robot_tray);
   m0.getRPY(robot_theta, robot_phi, robot_psi);
-  tf::Matrix3x3 m1(human_tray);
-  m1.getRPY(human_theta, human_phi, human_psi);
+  // tf::Matrix3x3 m1(human_tray);
+  // m1.getRPY(human_theta, human_phi, human_psi);
 // Initializing rotation variables for velocity calculations
   double new_robot_theta;
   double new_robot_phi;
   double new_robot_psi;
-  double new_human_theta;
-  double new_human_phi;
-  double new_human_psi;
+  // double new_human_theta;
+  // double new_human_phi;
+  // double new_human_psi;
 
 
 // Start while loop where transforms are extracted
@@ -133,10 +134,10 @@ int main(int argc, char** argv)
 
 // Looking up the three needed transforms
     try{
-      listener.lookupTransform("/world", "/Human",
-                               ros::Time(0), human_tray_transform);
-      listener.lookupTransform("/tray", "/Ball",
-                               ros::Time(0), ball_transform);
+      // listener.lookupTransform("/world", "/Human",
+      //                          ros::Time(0), human_tray_transform);
+      // listener.lookupTransform("/tray", "/Ball",
+      //                          ros::Time(0), ball_transform);
       listener.lookupTransform("/world", "/tray",
                                ros::Time(0), robot_tray_transform);
     }
@@ -147,11 +148,11 @@ int main(int argc, char** argv)
     }
 
 // Extracting rotations
-    human_tray = human_tray_transform.getRotation();
+    // human_tray = human_tray_transform.getRotation();
     robot_tray = robot_tray_transform.getRotation();
 
-    tf::Matrix3x3 m2(human_tray);
-    m2.getRPY(new_human_theta, new_human_phi, new_human_psi);
+    // tf::Matrix3x3 m2(human_tray);
+    // m2.getRPY(new_human_theta, new_human_phi, new_human_psi);
 
     tf::Matrix3x3 m3(robot_tray);
     m3.getRPY(new_robot_theta, new_robot_phi, new_robot_psi);
@@ -159,24 +160,24 @@ int main(int argc, char** argv)
 // Setting angular velocitoes
     robot_theta_dot = (robot_theta - new_robot_theta)*r;
     robot_phi_dot = (robot_phi - new_robot_phi)*r;
-    human_theta_dot = (human_theta - new_human_theta)*r;
-    human_phi_dot = (human_phi - new_human_phi)*r;
+    // human_theta_dot = (human_theta - new_human_theta)*r;
+    // human_phi_dot = (human_phi - new_human_phi)*r;
 
 // Update tray rotations
     robot_theta = new_robot_theta;
     robot_phi = new_robot_phi;
     robot_psi = new_robot_psi;
-    human_theta = new_human_theta;
-    human_phi = new_human_phi;
-    human_psi = new_human_psi;
+    // human_theta = new_human_theta;
+    // human_phi = new_human_phi;
+    // human_psi = new_human_psi;
 
 // Setting ball velocity
-    ball_vel_x = (ball_x - ball_transform.getOrigin().x())*r;
-    ball_vel_y = (ball_y - ball_transform.getOrigin().y())*r;
+    // ball_vel_x = (ball_x - ball_transform.getOrigin().x())*r;
+    // ball_vel_y = (ball_y - ball_transform.getOrigin().y())*r;
 
 // Updating translation of ball in tray frame
-    ball_x = ball_transform.getOrigin().x();
-    ball_y = ball_transform.getOrigin().y();
+    // ball_x = ball_transform.getOrigin().x();
+    // ball_y = ball_transform.getOrigin().y();
 
 // Update observation object
     obs.header.stamp = ros::Time::now();
@@ -185,15 +186,15 @@ int main(int argc, char** argv)
     obs.robot_psi = robot_psi;
     obs.robot_theta_dot = robot_theta_dot;
     obs.robot_phi_dot = robot_phi_dot;
-    obs.ball_x = ball_x;
-    obs.ball_y = ball_y;
-    obs.ball_vel_x = ball_vel_x;
-    obs.ball_vel_y = ball_vel_y;
-    obs.human_theta = human_theta;
-    obs.human_phi = human_phi;
-    obs.human_psi = human_psi;
-    obs.human_theta_dot = human_theta_dot;
-    obs.human_phi_dot = human_phi_dot;
+    // obs.ball_x = ball_x;
+    // obs.ball_y = ball_y;
+    // obs.ball_vel_x = ball_vel_x;
+    // obs.ball_vel_y = ball_vel_y;
+    // obs.human_theta = human_theta;
+    // obs.human_phi = human_phi;
+    // obs.human_psi = human_psi;
+    // obs.human_theta_dot = human_theta_dot;
+    // obs.human_phi_dot = human_phi_dot;
 
 // Publish
     observations.publish(obs);
