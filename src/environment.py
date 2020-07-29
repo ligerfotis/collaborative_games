@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from hyperparams_ur10 import MAX_STEPS, TIME_PER_TURN
 import rospkg
+import random
 
 accel_rate_x = 5 * 1e-3
 accel_rate_y = 5 * 1e-3
@@ -55,7 +56,10 @@ class Game:
         self.screen.set_alpha(None)
 
         self.keys = [False, False, False, False]
+        # random starting position under the barriers
+        # self.turtle_pos = [random.randint(0, self.width-64), random.randint(700, self.height-64)]
         self.turtle_pos = [5, self.height - 64]
+        
         self.reward = 0
         # 3 - Load images
         self.player = pygame.image.load(package_path + "/src/turtle.png").convert_alpha()
@@ -71,11 +75,6 @@ class Game:
         self.player_width = 64
 
         self.vel_y = self.vel_x = 0
-
-        self.point_1a = (60 - 50, self.height - 60 - 50)
-        self.point_2a = (self.width - 60 - 50, 60 - 50)
-        self.point_1b = (60 + 50, self.height - 60 + 50)
-        self.point_2b = (self.width - 60 + 50, 60 + 50)
 
         self.timedOut = self.finished = False
 
@@ -100,23 +99,10 @@ class Game:
         self.intro = True
         self.pause = False
 
-
-
         pygame.display.update()
 
-    def obstacle(self):
 
-        pygame.draw.line(self.screen, BLACK, self.point_1a, self.point_2a)
-        pygame.draw.line(self.screen, BLACK, self.point_1b, self.point_2b)
-
-
-    def obstacle2(self):
-
-        pygame.draw.line(self.screen, BLACK, [0, 0], [self.limit1, self.limit1])
-        pygame.draw.line(self.screen, BLACK, [self.limit2, self.limit2], [self.width,self.height])
-
-
-    def obstacle3(self):
+    def barriers_obstacle(self):
 
         pygame.draw.line(self.screen, BLACK, [0, self.height / 2], [self.limit2, self.height / 2])
         pygame.draw.line(self.screen, BLACK, [self.limit1, self.height / 2], [self.width, self.height / 2])
@@ -186,9 +172,9 @@ class Game:
         # 5 - clear the screen before drawing it again
         self.screen.fill(backgroundColor)
         # 6 - draw the screen elements
-        pygame.draw.circle(self.screen, RED, (self.width - 80, 80), 60)  # up-right
-
-        self.obstacle3()
+        #pygame.draw.circle(self.screen, RED, (self.width - 80, 80), 60)  # up-right
+        pygame.draw.rect(self.screen, RED, (self.width - 160, 40, 100, 100 ))
+        self.barriers_obstacle()
         turtle = self.screen.blit(self.player, self.turtle_pos)
         self.turtle_real_x_pos_list.append(turtle[0])
         self.turtle_real_y_pos_list.append(turtle[1])
@@ -261,20 +247,6 @@ class Game:
         self.vel_y_list.append(self.vel_y)
 
         self.time.append((time.time() - self.global_start_time) * 1e3)
-
-        # print([self.vel_x, self.vel_y])
-        # 10 - Win/Lose check
-        # if self.time_dependend and self.time_elapsed >= self.TIME:
-        #     self.running = 0
-        #     self.exitcode = 1
-        #     self.timedOut = True
-        #     self.finished = True
-
-        # if self.width - 40 > self.turtle_pos[0] > self.width - (80 + 40) \
-        #         and 20 < self.turtle_pos[1] < (80 + 60 / 2 - 32):
-        #     self.running = 0
-        #     self.exitcode = 1
-        #     self.finished = True  # This means final state achieved
 
         return time.time() - start_time
 
