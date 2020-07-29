@@ -13,7 +13,7 @@ from statistics import mean
 # escape = '\x1b'
 # exit = '\x03'
 
-offset = 5
+offset = 1
 
 UP = 'w'
 DOWN = 's'
@@ -68,14 +68,14 @@ class KeyboardPublisher:
 					break
 				except IOError: 
 					pass
-				if counter == 1000:
-					h.stamp = rospy.Time.now() 
-					act.action = 0
-					act.header = h
-					pub_x.publish(act)
-					pub_y.publish(act)
-					counter = 0
-				counter += 1
+				# if counter == 1000:
+				# 	h.stamp = rospy.Time.now() 
+				# 	act.action = 0
+				# 	act.header = h
+				# 	pub_x.publish(act)
+				# 	pub_y.publish(act)
+				# 	counter = 0
+				# counter += 1
 
 
 		finally:
