@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 import rospy
-import gym
 import std_msgs
 from std_msgs.msg import Int16, Float32
 from environment import Game 
-from keypoint_3d_matching_msgs.msg import Keypoint3d_list
 from hand_direction.msg import observation, action_agent, reward_observation, action_msg
 from std_srvs.srv import Empty,EmptyResponse, Trigger
 import time
@@ -37,7 +35,7 @@ class controller:
 		self.action_human = 0.0
 		self.action_agent = 0.0
 
-		self.act_human_sub = rospy.Subscriber("/rl/action_x", action_msg, self.set_human_agent)
+		self.act_human_sub = rospy.Subscriber("/rl/action_x", action_msg, self.set_human_action)
 
 		self.act_agent_pub = rospy.Publisher('/rl/action_y', action_msg, queue_size = 10)
 
@@ -62,10 +60,10 @@ class controller:
 			print("Dir %s was not found. Creating it..." %(self.plot_directory))
 			os.makedirs(self.plot_directory)
 
-	def set_human_agent(self,action_agent):
+	def set_human_action(self,action_human):
 		if action_agent.action != 0.0:
-			self.action_human = action_agent.action
-			self.transmit_time_list.append(rospy.get_rostime().to_sec()  - action_agent.header.stamp.to_sec())
+			self.action_human = action_human.action
+			self.transmit_time_list.append(rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec())
 
 
 	def game_loop(self):
@@ -206,8 +204,10 @@ class controller:
 				self.game.timedOut = True
 				self.game.finished = True
 
-			if self.game.width - 40 > self.game.turtle_pos[0] > self.game.width - (80 + 40) \
-			and 20 < self.game.turtle_pos[1] < (80 + 60 / 2 - 32):
+			# if self.game.width - 40 > self.game.turtle_pos[0] > self.game.width - (80 + 40) \
+			# and 20 < self.game.turtle_pos[1] < (80 + 60 / 2 - 32):
+
+			if self.game.width - 160 < self.game.turtle_pos[0] < self.game.	width - 60 - 64 and 40 < self.game.turtle_pos[1] < 140 -64:
 				self.game.running = 0
 				self.game.exitcode = 1
 				self.game.finished = True  # This means final state achieved
