@@ -37,7 +37,8 @@ class controller:
 
 		self.act_human_sub = rospy.Subscriber("/rl/action_x", action_msg, self.set_human_action)
 
-		self.act_agent_pub = rospy.Publisher('/rl/action_y', action_msg, queue_size = 10)
+		self.act_agent_pub = rospy.Publisher("/rl/action_y", action_msg, queue_size = 10)
+		self.reset_robot_pub = rospy.Publisher("/robot_reset", Int16, queue_size = 1)
 
 		self.transmit_time_list = []
 
@@ -54,6 +55,9 @@ class controller:
 		self.value_critic_lr_list = []
 		self.actor_lr_list = []
 		self.trials_list = []
+		self.agent_act_list = []
+		self.human_act_list = []
+		self.action_timesteps = []
 
 		self.plot_directory = package_path + "/src/plots/"
 		if not os.path.exists(self.plot_directory):
@@ -61,7 +65,7 @@ class controller:
 			os.makedirs(self.plot_directory)
 
 	def set_human_action(self,action_human):
-		if action_agent.action != 0.0:
+		if action_human.action != 0.0:
 			self.action_human = action_human.action
 			self.transmit_time_list.append(rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec())
 
@@ -83,11 +87,14 @@ class controller:
 
 				state = self.getState()
 				agent_act = self.agent.next_action(state)
+				self.agent_act_list.append(agent_act)
 
 				self.publish_agent_action(agent_act)
 
 				tmp_time = time.time()
 				act_human = self.action_human
+				self.human_act_list.append(act_human)
+				self.action_timesteps.append(tmp_time - global_time)
 
 				while time.time() - tmp_time < action_duration :
 					exec_time = self.game.play([act_human, agent_act.item()])
@@ -175,6 +182,8 @@ class controller:
 				state = self.getState()
 				agent_act = self.agent.next_action(state, stochastic=False) # take only the mean
 				# print(agent_act)
+				self.publish_agent_action(agent_act)
+
 				tmp_time = time.time()
 				while time.time() - tmp_time < 0.2 :
 					exec_time = self.game.play([self.action_human, agent_act.item()], total_games=test_num)
@@ -215,12 +224,15 @@ class controller:
 
 	def resetGame(self, msg=None):
 		wait_time = 3
+		# self.reset_robot_pub.publish(1)
 		self.game.waitScreen(msg1="Put Right Wrist on starting point.", msg2=msg, duration=wait_time)
 		self.game = Game()
 		self.action_human = 0.0
 		self.game.start_time = time.time()
 		self.total_reward_per_game = 0
 		self.turns = 0
+		# self.reset_robot_pub.publish(1)
+
 
 	def save_and_plot_stats(self):
 		np.savetxt(self.plot_directory + 'alpha_values.csv', self.alpha_values, delimiter=',', fmt='%f')
@@ -234,7 +246,9 @@ class controller:
 		np.savetxt(self.plot_directory + 'value_critic_lr_list.csv', self.value_critic_lr_list, delimiter=',', fmt='%f')
 		np.savetxt(self.plot_directory + 'actor_lr_list.csv', self.actor_lr_list, delimiter=',', fmt='%f')
 		np.savetxt(self.plot_directory + 'trials_list.csv', self.trials_list, delimiter=',', fmt='%f')
-
+		np.savetxt(self.plot_directory + 'agent_act_list.csv', self.agent_act_list, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + 'human_act_list.csv', self.human_act_list, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + 'action_timesteps.csv', self.action_timesteps, delimiter=',', fmt='%f')
 
 
 		plot(range(len(self.alpha_values)), self.alpha_values, "alpha_values", 'Alpha Value', 'Number of Gradient Updates', self.plot_directory, save=True)
@@ -245,7 +259,10 @@ class controller:
 
 		plot(range(len(self.critics_lr_list)), self.critics_lr_list, "critics_lr_list", 'Critic lr', 'Number of Gradient Updates', self.plot_directory, save=True)
 		plot(range(len(self.value_critic_lr_list)), self.value_critic_lr_list, "value_critic_lr_list", 'Value lr', 'Number of Gradient Updates', self.plot_directory, save=True)
-		plot(range(len(self.actor_lr_list)), self.actor_lr_list, "actor_lr_list", 'Actor lr', 'Number of Gradient Updates', self.plot_directory, save=True)		
+		plot(range(len(self.actor_lr_list)), self.actor_lr_list, "actor_lr_list", 'Actor lr', 'Number of Gradient Updates', self.plot_directory, save=True)	
+
+		plot(range(len(self.action_timesteps)), self.agent_act_list, "agent_act_list", 'Agent Actions', 'Timestamp', self.plot_directory, save=True)
+		plot(range(len(self.action_timesteps)), self.human_act_list, "human_act_list", 'Human Actions', 'Timestamp', self.plot_directory, save=True)		
 
 		plot(range(UPDATE_INTERVAL, MAX_STEPS+UPDATE_INTERVAL, UPDATE_INTERVAL), self.mean_list, "trials", 'Tests Score', 'Number of Interactions', self.plot_directory, save=True, variance=True, stdev=self.stdev_list)		
 
