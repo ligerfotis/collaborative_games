@@ -16,6 +16,12 @@ from tqdm import tqdm
 import rospkg
 import os
 
+# control_mode = "accell_dir"
+# control_mode = "vel"
+control_mode = "accell"
+
+
+
 # path = "/home/fligerakis/catkin_ws/src/hand_direction/plots/"
 rospack = rospkg.RosPack()
 package_path = rospack.get_path("hand_direction")
@@ -39,6 +45,8 @@ class controller:
 
 		self.act_agent_pub = rospy.Publisher("/rl/action_y", action_msg, queue_size = 10)
 		self.reset_robot_pub = rospy.Publisher("/robot_reset", Int16, queue_size = 1)
+
+		self.turtle_state_pub = rospy.Publisher("/rl/turtle_pos_X", Int16, queue_size = 10)
 
 		self.transmit_time_list = []
 
@@ -89,6 +97,7 @@ class controller:
 				agent_act = self.agent.next_action(state)
 				self.agent_act_list.append(agent_act)
 
+				self.turtle_state_pub.publish(state[2])
 				self.publish_agent_action(agent_act)
 
 				tmp_time = time.time()
@@ -97,7 +106,10 @@ class controller:
 				self.action_timesteps.append(tmp_time - global_time)
 
 				while time.time() - tmp_time < action_duration :
-					exec_time = self.game.play([act_human, agent_act.item()])
+					# control mode is "accell" or "vel"
+					# exec_time = self.game.play([act_human, agent_act.item()],control_mode=control_mode)
+					exec_time = self.game.play([act_human, 0],control_mode=control_mode)
+					
 					
 				reward = self.getReward()
 				next_state = self.getState()
@@ -186,7 +198,7 @@ class controller:
 
 				tmp_time = time.time()
 				while time.time() - tmp_time < 0.2 :
-					exec_time = self.game.play([self.action_human, agent_act.item()], total_games=test_num)
+					exec_time = self.game.play([self.action_human, agent_act.item()], total_games=test_num, control_mode=control_mode)
 
 				score -= 1
 				self.check_goal_reached()

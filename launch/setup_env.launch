@@ -4,12 +4,16 @@
 	<node pkg="hand_direction" type="rl_wrapper_train.py" respawn="false" name="Environment" output="screen">
 	  </node>
 
-	<!-- <node pkg="hand_direction" type="keypoint_to_action_acceleration.py" respawn="false" name="Human_Hand" output="screen">
+	<node pkg="hand_direction" type="keypoint_to_action_acceleration.py" respawn="false" name="Human_Hand" output="screen">
+	</node>
+	<!-- <node pkg="hand_direction" type="keypoint_to_action_direction_acceleration.py" respawn="false" name="Human_Hand" output="screen">
+	</node> -->
+	<!-- <node pkg="hand_direction" type="keypoint_to_action_position.py" respawn="false" name="Human_Hand" output="screen">
 	</node> -->
 
-	<node pkg="hand_direction" type="keypress_xy.py" respawn="false" name="Keyboard" output="screen">
+	<!-- <node pkg="hand_direction" type="keypress_xy.py" respawn="false" name="Keyboard" output="screen">
 	</node>
-
+ -->
 	<!-- <node pkg="hand_direction" type="joint_observations.py" respawn="false" name="observations" output="screen">
 		</node>
  -->

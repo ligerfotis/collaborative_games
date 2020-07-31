@@ -131,7 +131,7 @@ class RobotController:
         # rospy.sleep(0.2)
 
 if __name__ == '__main__':
-    rospy.init_node('robot_controller', anonymous=False)
+    rospy.init_node('robot_commander', anonymous=False)
     ctrl = RobotController()
     ctrl.reset()
     while 1:

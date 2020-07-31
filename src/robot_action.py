@@ -9,8 +9,8 @@ agent_p = 5
 height = 800
 width = 800
 
-table_max_x = 35
-table_max_y = 35
+table_max_x = 0.35
+table_max_y = 0.35
 
 # should be 12
 scale_x = ceil((width/2) / table_max_x)
@@ -35,6 +35,12 @@ def convertPixels2cm(x, y):
 	y_cm = y_px / scale_y
 
 	return x_cm, y_cm
+
+def convertCm2Pixels(x, y):
+	x_px = int( x * width / table_max_x)
+	y_px = int( y * height / table_max_y)
+
+	return x_px, y_px
 
 # set limits to commands
 def regulate(cmd):

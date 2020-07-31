@@ -16,7 +16,7 @@ class Converter:
 	def __init__(self):
 		# print("init")
 		self.keypoint_sub = rospy.Subscriber("/topic_transform", Keypoint3d_list, self.callback)
-		self.action_human_pub = rospy.Publisher('/rl/action_x', action_msg, queue_size = 10)
+		self.action_human_pub = rospy.Publisher('/rl/action_x', action_msg, queue_size = 1)
 		self.prev_x = None
 		self.start_time = None
 
@@ -53,16 +53,20 @@ class Converter:
 		'''
 		pos_x = data.keypoints[0].points.point.x
 		'''
-		pos_x = - data.keypoints[0].points.point.y # yes it is "y" because of the setup in lab
+		pos_x = data.keypoints[0].points.point.x # yes it is "y" because of the setup in lab
+		if 0.0 < pos_x:
+			pos_x = 0
+		elif pos_x < - 0.35:
+			pos_x = 0.35
+
+		pos_x = pos_x + 0.175
+
+		act = action_msg()
+		act.action = pos_x/2
+		act.header = h
 		
-		shift = self.getShift(self.normalize(pos_x))
-		if shift != 0:
-			act = action_msg()
-			act.action = shift
-			act.header = h
-			
-			self.action_human_pub.publish(act)
-			
+		self.action_human_pub.publish(act)
+		
 
 if __name__ == '__main__':
 	rospy.init_node('keypoint_to_action', anonymous=True)

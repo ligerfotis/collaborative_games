@@ -17,6 +17,7 @@ import random
 accel_rate_x = 3 * 1e-3
 accel_rate_y = 3 * 1e-3
 
+fps = 60
 
 backgroundColor = (255, 255, 255)
 WHITE = (255, 255, 255)
@@ -107,6 +108,13 @@ class Game:
         pygame.draw.line(self.screen, BLACK, [0, self.height / 2], [self.limit2, self.height / 2])
         pygame.draw.line(self.screen, BLACK, [self.limit1, self.height / 2], [self.width, self.height / 2])
 
+    def update_fps(self):
+        self.clock.tick(fps)
+        fps_str = str(int(self.clock.get_fps()))
+        font = pygame.font.SysFont("Arial", 18)
+        fps_text = font.render("FPS: " + fps_str, 1, pygame.Color("coral"))
+        return fps_text
+
 
     def button(self, msg, x, y, w, h, ic, ac, action=None):
         mouse = pygame.mouse.get_pos()
@@ -160,7 +168,7 @@ class Game:
             pygame.display.update()
             self.clock.tick(15)
 
-    def play(self, data=None, total_games=MAX_STEPS):
+    def play(self, data=None, total_games=MAX_STEPS, control_mode="accell_dir"):
         # print(data)
         start_time = time.time()
         if data is None:
@@ -173,8 +181,13 @@ class Game:
         self.screen.fill(backgroundColor)
         # 6 - draw the screen elements
         #pygame.draw.circle(self.screen, RED, (self.width - 80, 80), 60)  # up-right
+        
         pygame.draw.rect(self.screen, RED, (self.width - 160, 40, 100, 100 ))
+        
         self.barriers_obstacle()
+        
+        self.screen.blit(self.update_fps(), (self.width / 2 - 150, 7))
+
         turtle = self.screen.blit(self.player, self.turtle_pos)
         self.turtle_real_x_pos_list.append(turtle[0])
         self.turtle_real_y_pos_list.append(turtle[1])
@@ -183,11 +196,10 @@ class Game:
 
         self.time_elapsed = int(floor(time.time() - self.start_time))
         if self.time_dependend:
-            survivedtext = font.render(
+            survivedtext = font.render( "Time: " + 
                 str(self.TIME - self.time_elapsed), True, (0, 0, 0))
         else:
-            survivedtext = font.render(
-                str(self.time_elapsed), True, (0, 0, 0))
+            survivedtext = font.render( "Time: " + str(self.time_elapsed), True, (0, 0, 0))
 
         self.screen.blit(survivedtext, (self.width / 2, 10))
 
@@ -212,16 +224,31 @@ class Game:
                 pygame.quit()
                 exit(0)
 
-        self.accel_x = x_data * accel_rate_x
-        self.accel_y = y_data * accel_rate_y
+        # actions are the acceleration directions
+        if control_mode == "accell_dir":
+            self.accel_x = x_data * accel_rate_x
+            self.accel_y = y_data * accel_rate_y
         
-        # print("Action: %f.\n Accel: %f.\nVel: %f." % (data[1], self.accel_y, self.vel_y))
-        self.vel_x += self.accel_x
-        self.vel_y += self.accel_y
+            # print("Action: %f.\n Accel: %f.\nVel: %f." % (data[1], self.accel_y, self.vel_y))
+            self.vel_x += self.accel_x
+            self.vel_y += self.accel_y
+        # actions are the commanded velocities
+        elif control_mode == "vel":
+            self.vel_x = x_data
+            self.vel_y = y_data 
+        elif control_mode == "accell":
+            self.accel_x = x_data 
+            self.accel_y = y_data
+        
+            # print("Action: %f.\n Accel: %f.\nVel: %f." % (data[1], self.accel_y, self.vel_y))
+            self.vel_x += self.accel_x
+            self.vel_y += self.accel_y
 
         current_pos_x, current_pos_y = self.turtle_pos
         next_pos_x = self.turtle_pos[0] + self.vel_x
         next_pos_y = self.turtle_pos[1] - self.vel_y
+
+        print("Pos x: %f. Vel x: %f. Accel x: %f" % (self.turtle_pos[0], self.vel_x, self.accel_x))
 
         # check collision on the x axis
         if 0 < next_pos_x < self.width - 64:
