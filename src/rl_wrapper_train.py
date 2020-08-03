@@ -66,6 +66,20 @@ class controller:
 		self.agent_act_list = []
 		self.human_act_list = []
 		self.action_timesteps = []
+		self.turtle_pos_x = []
+		self.turtle_vel_x = []
+		self.turtle_acc_x = []
+		self.turtle_pos_y = []
+		self.turtle_vel_y = []
+		self.turtle_acc_y = []
+		self.position_timesteps = []
+		self.exec_time_list = []
+		self.act_human_list = []
+		self.real_act_human_list = []
+		self.time_real_act_human_list = []
+		self.turtle_pos_x_dict = {}
+
+		self.fps_list = []
 
 		self.plot_directory = package_path + "/src/plots/"
 		if not os.path.exists(self.plot_directory):
@@ -75,6 +89,9 @@ class controller:
 	def set_human_action(self,action_human):
 		if action_human.action != 0.0:
 			self.action_human = action_human.action
+			self.time_real_act_human_list.append(rospy.get_rostime().to_sec())
+			self.real_act_human_list.append(self.action_human)
+
 			self.transmit_time_list.append(rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec())
 
 
@@ -104,12 +121,28 @@ class controller:
 				act_human = self.action_human
 				self.human_act_list.append(act_human)
 				self.action_timesteps.append(tmp_time - global_time)
-
-				while time.time() - tmp_time < action_duration :
+				count  = 0
+				while ((time.time() - tmp_time) < action_duration) and self.game.running:
+					count += 1
 					# control mode is "accell" or "vel"
-					# exec_time = self.game.play([act_human, agent_act.item()],control_mode=control_mode)
-					exec_time = self.game.play([act_human, 0],control_mode=control_mode)
+					exec_time = self.game.play([act_human, agent_act.item()],control_mode=control_mode)
+					# exec_time = self.game.play([act_human, 0],control_mode=control_mode)
+					self.turtle_pos_x.append(self.game.turtle_pos[0])
+					self.turtle_vel_x.append(self.game.vel_x)
+					self.turtle_acc_x.append(self.game.accel_x)
+					self.turtle_pos_y.append(self.game.turtle_pos[1])
+					self.turtle_vel_y.append(self.game.vel_y)
+					self.turtle_acc_y.append(self.game.accel_y)
+					self.position_timesteps.append(time.time() - global_time)
+
+					self.fps_list.append(self.game.current_fps)
+
+					self.turtle_pos_x_dict[self.game.turtle_pos[0]] = exec_time
+
+					self.exec_time_list.append(exec_time)
+					self.check_goal_reached()
 					
+				# print count
 					
 				reward = self.getReward()
 				next_state = self.getState()
@@ -155,12 +188,12 @@ class controller:
 						self.value_critic_lr_list.append(value_critic_lr)
 						self.actor_lr_list.append(actor_lr)
 
-					# run trials
-					score_list =  self.test()
+					# # run trials
+					# score_list =  self.test()
 
-					self.mean_list.append(mean(score_list))
-					self.stdev_list.append(stdev(score_list))
-					self.trials_list.append(score_list)
+					# self.mean_list.append(mean(score_list))
+					# self.stdev_list.append(stdev(score_list))
+					# self.trials_list.append(score_list)
 
 					self.resetGame()
 			else:
@@ -197,11 +230,13 @@ class controller:
 				self.publish_agent_action(agent_act)
 
 				tmp_time = time.time()
-				while time.time() - tmp_time < 0.2 :
+				while ((time.time() - tmp_time) < 0.2) and self.game.running:
 					exec_time = self.game.play([self.action_human, agent_act.item()], total_games=test_num, control_mode=control_mode)
+					self.check_goal_reached()
 
 				score -= 1
 				self.check_goal_reached()
+				
 
 			score_list.append(score)
 
@@ -228,7 +263,7 @@ class controller:
 			# if self.game.width - 40 > self.game.turtle_pos[0] > self.game.width - (80 + 40) \
 			# and 20 < self.game.turtle_pos[1] < (80 + 60 / 2 - 32):
 
-			if self.game.width - 160 < self.game.turtle_pos[0] < self.game.	width - 60 - 64 and 40 < self.game.turtle_pos[1] < 140 -64:
+			if (self.game.width - 160) <= self.game.turtle_pos[0] <= (self.game.width - 60 - 64) and 40 <= self.game.turtle_pos[1] <= (140 - 64):
 				self.game.running = 0
 				self.game.exitcode = 1
 				self.game.finished = True  # This means final state achieved
@@ -247,36 +282,119 @@ class controller:
 
 
 	def save_and_plot_stats(self):
-		np.savetxt(self.plot_directory + 'alpha_values.csv', self.alpha_values, delimiter=',', fmt='%f')
-		np.savetxt(self.plot_directory + 'policy_loss.csv', self.policy_loss_list, delimiter=',', fmt='%f')
-		np.savetxt(self.plot_directory + 'value_loss.csv', self.value_loss_list, delimiter=',', fmt='%f')
-		np.savetxt(self.plot_directory + 'rewards_list.csv', self.rewards_list, delimiter=',', fmt='%f')
-		np.savetxt(self.plot_directory + 'turn_list.csv', self.turn_list, delimiter=',', fmt='%f')
-		np.savetxt(self.plot_directory + 'means.csv', self.mean_list, delimiter=',', fmt='%f')		
-		np.savetxt(self.plot_directory + 'stdev.csv', self.stdev_list, delimiter=',', fmt='%f')
-		np.savetxt(self.plot_directory + 'critics_lr_list.csv', self.critics_lr_list, delimiter=',', fmt='%f')
-		np.savetxt(self.plot_directory + 'value_critic_lr_list.csv', self.value_critic_lr_list, delimiter=',', fmt='%f')
-		np.savetxt(self.plot_directory + 'actor_lr_list.csv', self.actor_lr_list, delimiter=',', fmt='%f')
-		np.savetxt(self.plot_directory + 'trials_list.csv', self.trials_list, delimiter=',', fmt='%f')
-		np.savetxt(self.plot_directory + 'agent_act_list.csv', self.agent_act_list, delimiter=',', fmt='%f')
-		np.savetxt(self.plot_directory + 'human_act_list.csv', self.human_act_list, delimiter=',', fmt='%f')
-		np.savetxt(self.plot_directory + 'action_timesteps.csv', self.action_timesteps, delimiter=',', fmt='%f')
+		# np.savetxt(self.plot_directory + 'alpha_values.csv', self.alpha_values, delimiter=',', fmt='%f')
+		# np.savetxt(self.plot_directory + 'policy_loss.csv', self.policy_loss_list, delimiter=',', fmt='%f')
+		# np.savetxt(self.plot_directory + 'value_loss.csv', self.value_loss_list, delimiter=',', fmt='%f')
+		# np.savetxt(self.plot_directory + 'rewards_list.csv', self.rewards_list, delimiter=',', fmt='%f')
+		# np.savetxt(self.plot_directory + 'turn_list.csv', self.turn_list, delimiter=',', fmt='%f')
+		# np.savetxt(self.plot_directory + 'means.csv', self.mean_list, delimiter=',', fmt='%f')		
+		# np.savetxt(self.plot_directory + 'stdev.csv', self.stdev_list, delimiter=',', fmt='%f')
+		# np.savetxt(self.plot_directory + 'critics_lr_list.csv', self.critics_lr_list, delimiter=',', fmt='%f')
+		# np.savetxt(self.plot_directory + 'value_critic_lr_list.csv', self.value_critic_lr_list, delimiter=',', fmt='%f')
+		# np.savetxt(self.plot_directory + 'actor_lr_list.csv', self.actor_lr_list, delimiter=',', fmt='%f')
+		# np.savetxt(self.plot_directory + 'trials_list.csv', self.trials_list, delimiter=',', fmt='%f')
+		# np.savetxt(self.plot_directory + 'agent_act_list.csv', self.agent_act_list, delimiter=',', fmt='%f')
+		# np.savetxt(self.plot_directory + 'human_act_list.csv', self.human_act_list, delimiter=',', fmt='%f')
+		# np.savetxt(self.plot_directory + 'action_timesteps.csv', self.action_timesteps, delimiter=',', fmt='%f')
+		# np.savetxt(self.plot_directory + 'fps_list.csv', self.fps_list, delimiter=',', fmt='%f')
+
+		np.savetxt(self.plot_directory + "turtle_dynamics/" + 'turtle_pos_x.csv', self.turtle_pos_x, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + "turtle_dynamics/" + 'turtle_vel_x.csv', self.turtle_vel_x, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + "turtle_dynamics/" + 'turtle_accel_x.csv', self.turtle_acc_x, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + "turtle_dynamics/" + 'turtle_pos_y.csv', self.turtle_pos_y, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + "turtle_dynamics/" + 'turtle_vel_y.csv', self.turtle_vel_y, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + "turtle_dynamics/" + 'turtle_accel_y.csv', self.turtle_acc_y, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + "turtle_dynamics/" + 'exec_time_list.csv', self.exec_time_list, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + "turtle_dynamics/" + 'real_act_human_list.csv', self.real_act_human_list, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + "turtle_dynamics/" + 'time_real_act_human_list.csv', self.time_real_act_human_list, delimiter=',', fmt='%f')
+		
+
+		# plot(range(len(self.alpha_values)), self.alpha_values, "alpha_values", 'Alpha Value', 'Number of Gradient Updates', self.plot_directory, save=True)
+		# plot(range(len(self.policy_loss_list)), self.policy_loss_list, "policy_loss", 'Policy loss', 'Number of Gradient Updates', self.plot_directory, save=True)
+		# plot(range(len(self.value_loss_list)), self.value_loss_list, "value_loss_list", 'Value loss', 'Number of Gradient Updates', self.plot_directory, save=True)
+		# plot(range(len(self.rewards_list)), self.rewards_list, "Rewards_per_game", 'Total Rewards per Game', 'Number of Games', self.plot_directory, save=True)
+		# plot(range(len(self.turn_list)), self.turn_list, "Steps_per_game", 'Turns per Game', 'Number of Games', self.plot_directory, save=True)	
+
+		# plot(range(len(self.critics_lr_list)), self.critics_lr_list, "critics_lr_list", 'Critic lr', 'Number of Gradient Updates', self.plot_directory, save=True)
+		# plot(range(len(self.value_critic_lr_list)), self.value_critic_lr_list, "value_critic_lr_list", 'Value lr', 'Number of Gradient Updates', self.plot_directory, save=True)
+		# plot(range(len(self.actor_lr_list)), self.actor_lr_list, "actor_lr_list", 'Actor lr', 'Number of Gradient Updates', self.plot_directory, save=True)	
+
+		# plot(range(len(self.action_timesteps)), self.agent_act_list, "agent_act_list", 'Agent Actions', 'Timestamp', self.plot_directory, save=True)
+		# plot(range(len(self.action_timesteps)), self.human_act_list, "human_act_list", 'Human Actions', 'Timestamp', self.plot_directory, save=True)		
+
+		# plot(range(UPDATE_INTERVAL, MAX_STEPS + UPDATE_INTERVAL, UPDATE_INTERVAL), self.mean_list, "trials", 'Tests Score', 'Number of Interactions', self.plot_directory, save=True, variance=True, stdev=self.stdev_list)		
+
+		fig, axs = plt.subplots(2)
+		fig.suptitle('Human Agent Actions Comparison')
+		fig.tight_layout()
+		axs[0].set_title('Human Actions')
+		axs[0].plot(range(len(self.action_timesteps)), self.human_act_list)
+		axs[0].grid()
+			
+		axs[1].set_title('Agent Actions')
+		axs[1].plot(range(len(self.action_timesteps)), self.agent_act_list)
+		axs[1].grid()
+		plt.savefig(self.plot_directory + "Human_Agent_Actions_Comparison", dpi=150)
+
+		fig, axs = plt.subplots(4)
+		fig.tight_layout()
+
+		plt.sca(axs[0])
+		plt.yticks(np.arange(0, 800, step=100))
+
+		axs[0].set_title('Turtle Position X')
+		axs[0].plot(range(len(self.position_timesteps)), self.turtle_pos_x)
+		axs[0].grid()
+		
+		plt.sca(axs[1])
+		plt.yticks(np.arange(-10, 10, step=2.5))
+	
+		axs[1].set_title('Turtle Velocity X')
+		axs[1].plot(range(len(self.position_timesteps)), self.turtle_vel_x)
+		axs[1].grid()
+		# axs[1].yticks(np.arange(-10, 10, step=1))
 
 
-		plot(range(len(self.alpha_values)), self.alpha_values, "alpha_values", 'Alpha Value', 'Number of Gradient Updates', self.plot_directory, save=True)
-		plot(range(len(self.policy_loss_list)), self.policy_loss_list, "policy_loss", 'Policy loss', 'Number of Gradient Updates', self.plot_directory, save=True)
-		plot(range(len(self.value_loss_list)), self.value_loss_list, "value_loss_list", 'Value loss', 'Number of Gradient Updates', self.plot_directory, save=True)
-		plot(range(len(self.rewards_list)), self.rewards_list, "Rewards_per_game", 'Total Rewards per Game', 'Number of Games', self.plot_directory, save=True)
-		plot(range(len(self.turn_list)), self.turn_list, "Steps_per_game", 'Turns per Game', 'Number of Games', self.plot_directory, save=True)	
+		plt.sca(axs[2])
+		plt.yticks(np.arange(-0.18, 0.18, step=0.6))
 
-		plot(range(len(self.critics_lr_list)), self.critics_lr_list, "critics_lr_list", 'Critic lr', 'Number of Gradient Updates', self.plot_directory, save=True)
-		plot(range(len(self.value_critic_lr_list)), self.value_critic_lr_list, "value_critic_lr_list", 'Value lr', 'Number of Gradient Updates', self.plot_directory, save=True)
-		plot(range(len(self.actor_lr_list)), self.actor_lr_list, "actor_lr_list", 'Actor lr', 'Number of Gradient Updates', self.plot_directory, save=True)	
+		axs[2].set_title('Turtle Acceleration X')
+		axs[2].plot(range(len(self.position_timesteps)), self.turtle_acc_x)
+		axs[2].grid()
+		# axs[2].yticks(np.arange(-0.05, 0.05, step=0.01))
 
-		plot(range(len(self.action_timesteps)), self.agent_act_list, "agent_act_list", 'Agent Actions', 'Timestamp', self.plot_directory, save=True)
-		plot(range(len(self.action_timesteps)), self.human_act_list, "human_act_list", 'Human Actions', 'Timestamp', self.plot_directory, save=True)		
+		plt.sca(axs[3])
+		plt.yticks(np.arange(-0.18, 0.18, step=0.6))
 
-		plot(range(UPDATE_INTERVAL, MAX_STEPS+UPDATE_INTERVAL, UPDATE_INTERVAL), self.mean_list, "trials", 'Tests Score', 'Number of Interactions', self.plot_directory, save=True, variance=True, stdev=self.stdev_list)		
+		axs[3].set_title('Real Hand Movement X')
+		axs[3].plot(self.time_real_act_human_list, self.real_act_human_list)
+		axs[3].grid()
+		# axs[3].yticks(np.arange(-0.18, 0.18, step=0.06))
+		plt.savefig(self.plot_directory + "Turtle_Human_Comparison_x",dpi=150)
+
+		fig, axs = plt.subplots(3)
+		fig.suptitle('Turtle Y Position & Velocity and Agent Action Comparison')
+		fig.tight_layout()
+		axs[0].set_title('Turtle Position Y')
+		axs[0].plot(range(len(self.position_timesteps)), self.turtle_pos_y)
+		axs[0].grid()
+		axs[1].set_title('Turtle Velocity Y')
+		axs[1].plot(range(len(self.position_timesteps)), self.turtle_vel_y)
+		axs[1].grid()
+		axs[2].set_title('Turtle Acceleration Y')
+		axs[2].plot(range(len(self.position_timesteps)), self.turtle_acc_y)
+		axs[2].grid()
+		plt.savefig(self.plot_directory + "tutle_pos_vel_acc_y", dpi=150)
+
+		try:
+			fig = plt.figure()
+			lists = sorted(self.turtle_pos_x_dict.items()) # sorted by key, return a list of tuples
+			plt.grid(True)
+			x, y = zip(*lists) # unpack a list of pairs into two tuples
+			plt.plot(x, y)
+			plt.savefig(self.plot_directory + "turtle_dynamics/" + "position_hist",dpi=150)
+		except Exception:
+			print(Exception)
 
 	def publish_agent_action(self, agent_act):
 		h = std_msgs.msg.Header()

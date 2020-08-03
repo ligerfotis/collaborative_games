@@ -14,10 +14,10 @@ from hyperparams_ur10 import MAX_STEPS, TIME_PER_TURN
 import rospkg
 import random
 
-accel_rate_x = 3 * 1e-3
-accel_rate_y = 3 * 1e-3
+accel_rate_x = 1 
+accel_rate_y = 1e-1
 
-fps = 60
+fps = 40
 
 backgroundColor = (255, 255, 255)
 WHITE = (255, 255, 255)
@@ -35,7 +35,6 @@ package_path = rospack.get_path("hand_direction")
 def text_objects(text, font):
     textSurface = font.render(text, True, BLACK)
     return textSurface, textSurface.get_rect()
-
 
 def quit_game():
     pygame.display.quit()
@@ -92,6 +91,8 @@ class Game:
         self.turtle_real_x_pos_list = []
         self.turtle_real_y_pos_list = []
 
+        self.current_fps = None
+
         self.accel_x, self.accel_y, self.vel_x, self.vel_y = [0, 0, 0, 0]
 
         self.clock = pygame.time.Clock()
@@ -111,6 +112,7 @@ class Game:
     def update_fps(self):
         self.clock.tick(fps)
         fps_str = str(int(self.clock.get_fps()))
+        self.current_fps = self.clock.get_fps()
         font = pygame.font.SysFont("Arial", 18)
         fps_text = font.render("FPS: " + fps_str, 1, pygame.Color("coral"))
         return fps_text
@@ -186,9 +188,65 @@ class Game:
         
         self.barriers_obstacle()
         
-        self.screen.blit(self.update_fps(), (self.width / 2 - 150, 7))
+        # self.screen.blit(self.update_fps(), (self.width / 2 - 150, 7))
+
+        # actions are the acceleration directions
+        if control_mode == "accell_dir":
+            self.accel_x = x_data * accel_rate_x
+            self.accel_y = y_data * accel_rate_y
+        
+            # print("Action: %f.\n Accel: %f.\nVel: %f." % (data[1], self.accel_y, self.vel_y))
+            self.vel_x += self.accel_x
+            self.vel_y += self.accel_y
+        # actions are the commanded velocities
+        elif control_mode == "vel":
+            self.vel_x = x_data
+            self.vel_y = y_data 
+        elif control_mode == "accell":
+            self.accel_x = x_data * accel_rate_x
+            self.accel_y = y_data * accel_rate_y
+        
+            # print("Action: %f.\n Accel: %f.\nVel: %f." % (data[1], self.accel_y, self.vel_y))
+            self.vel_x += self.accel_x
+            self.vel_y += self.accel_y
+
+        current_pos_x, current_pos_y = self.turtle_pos
+        next_pos_x = self.turtle_pos[0] + self.vel_x
+        next_pos_y = self.turtle_pos[1] - self.vel_y
+
+        # check collision on the x axis
+        if 0 < next_pos_x < self.width - 64:
+            #check collision with barriers
+            if (self.height / 2) - 64 < current_pos_y < (self.height / 2) \
+                    and (next_pos_x < self.limit2 - 34 or next_pos_x + 34 > self.limit1):
+                self.vel_x = 0
+        else:
+            if next_pos_x <= 0:
+                self.vel_x = - current_pos_x
+            else:
+                self.vel_x = self.width - 64 - current_pos_x
+
+        self.turtle_pos[0] += self.vel_x
+
+        if 0 < next_pos_y < self.height - 64:
+            #check collision with barriers
+            if 0 <= self.turtle_pos[0] < self.limit2 - 34 or self.limit1 - 34 < self.turtle_pos[0] < self.width:
+                if current_pos_y >= self.height / 2:
+                    if next_pos_y <= self.height / 2:
+                        self.vel_y = current_pos_y - self.height / 2
+                elif current_pos_y + 64 <= self.height / 2:
+                    if next_pos_y +64 >= self.height / 2:
+                        self.vel_y = current_pos_y + 64 - self.height / 2
+        else:
+            if next_pos_y <= 0:
+                self.vel_y = current_pos_y
+            else:
+                self.vel_y = -(self.height - 64 - current_pos_y)
+
+        self.turtle_pos[1] -= self.vel_y
 
         turtle = self.screen.blit(self.player, self.turtle_pos)
+
         self.turtle_real_x_pos_list.append(turtle[0])
         self.turtle_real_y_pos_list.append(turtle[1])
         # 6.4 - Draw clock
@@ -214,6 +272,7 @@ class Game:
             print("An exception occurred")
 
 
+        self.screen.blit(self.update_fps(), (self.width / 2 - 150, 7))
         # 7 - update the screen
         pygame.display.flip()
         # 8 - loop through the events
@@ -224,48 +283,8 @@ class Game:
                 pygame.quit()
                 exit(0)
 
-        # actions are the acceleration directions
-        if control_mode == "accell_dir":
-            self.accel_x = x_data * accel_rate_x
-            self.accel_y = y_data * accel_rate_y
-        
-            # print("Action: %f.\n Accel: %f.\nVel: %f." % (data[1], self.accel_y, self.vel_y))
-            self.vel_x += self.accel_x
-            self.vel_y += self.accel_y
-        # actions are the commanded velocities
-        elif control_mode == "vel":
-            self.vel_x = x_data
-            self.vel_y = y_data 
-        elif control_mode == "accell":
-            self.accel_x = x_data 
-            self.accel_y = y_data
-        
-            # print("Action: %f.\n Accel: %f.\nVel: %f." % (data[1], self.accel_y, self.vel_y))
-            self.vel_x += self.accel_x
-            self.vel_y += self.accel_y
-
-        current_pos_x, current_pos_y = self.turtle_pos
-        next_pos_x = self.turtle_pos[0] + self.vel_x
-        next_pos_y = self.turtle_pos[1] - self.vel_y
-
-        print("Pos x: %f. Vel x: %f. Accel x: %f" % (self.turtle_pos[0], self.vel_x, self.accel_x))
-
-        # check collision on the x axis
-        if 0 < next_pos_x < self.width - 64:
-            if (self.height / 2) - 64 < current_pos_y < (self.height / 2) \
-                    and (next_pos_x < self.limit2 - 34 or next_pos_x + 34 > self.limit1):
-                self.vel_x = 0
-        else:
-            self.vel_x = 0
-        self.turtle_pos[0] += self.vel_x
-
-        if 0 < next_pos_y < self.height - 64:
-            if 0 < self.turtle_pos[0] < self.limit2 - 34 or self.limit1 - 34 < self.turtle_pos[0] < self.width:
-                if self.height / 2 - 64 <= next_pos_y <= self.height / 2:
-                    self.vel_y = 0
-        else:
-            self.vel_y = 0
-        self.turtle_pos[1] -= self.vel_y
+        # print("Pos x: %f. Vel x: %f. Accel x: %f" % (self.turtle_pos[0], self.vel_x, self.accel_x))
+        # print("Pos y: %f. Vel y: %f. Accel y: %f" % (self.turtle_pos[1], self.vel_y, self.accel_y))
 
         self.accel_x_list.append(self.accel_x)
         self.accel_y_list.append(self.accel_y)
@@ -274,7 +293,8 @@ class Game:
         self.vel_y_list.append(self.vel_y)
 
         self.time.append((time.time() - self.global_start_time) * 1e3)
-
+        # self.clock.tick()
+        # return time.time() - start_time
         return time.time() - start_time
 
 

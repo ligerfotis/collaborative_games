@@ -62,7 +62,7 @@ class Converter:
 		pos_x = pos_x + 0.175
 
 		act = action_msg()
-		act.action = pos_x/2
+		act.action = pos_x
 		act.header = h
 		
 		self.action_human_pub.publish(act)

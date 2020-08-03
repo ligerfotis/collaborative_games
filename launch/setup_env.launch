@@ -12,8 +12,8 @@
 	</node> -->
 
 	<!-- <node pkg="hand_direction" type="keypress_xy.py" respawn="false" name="Keyboard" output="screen">
-	</node>
- -->
+	</node> -->
+
 	<!-- <node pkg="hand_direction" type="joint_observations.py" respawn="false" name="observations" output="screen">
 		</node>
  -->

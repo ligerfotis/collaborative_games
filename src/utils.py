@@ -27,8 +27,8 @@ def plot(time_elpsd, data, figure_title, y_axis_name, x_axis_name, path, save=Tr
     if variance:
         plt.fill_between(time_elpsd, np.array(data) - np.array(stdev), np.array(data) + np.array(stdev))
     if save:
-        plt.savefig(path + figure_title)
-        plt.show()
+        plt.savefig(path + figure_title, dpi=150)
+        # plt.show()
     else:
         plt.show()
 
@@ -68,11 +68,11 @@ if __name__ == "__main__":
             print("Dir %s was not found. Creating it..." %(plot_directory))
             os.makedirs(plot_directory)
         if sys.argv[2] == "simple":
-            plot(time, actions, "Actions_Simple", 'Actions', 'Timestamp', plot_directory, save=True)
+            plot(range(len(actions)), actions, "Actions_Simple", 'Actions', 'Timestamp', plot_directory, save=True)
         elif sys.argv[2] == "simple_diff":
             plot(time[1:], actions[1:] - actions[:-1], "Actions_Simple_diff", 'Actions Change', 'Timestamp', plot_directory, save=True)
         elif sys.argv[2] == "hist":
-            plot(time, actions, "Actions_Hist", 'Actions', 'Timestamp', plot_directory, save=True, plt_type="hist")
+            plot(time, actions, "Hist", 'Histogram', 'FPS', plot_directory, save=True, plt_type="hist")
         elif sys.argv[2] == "hist_diff":
             plot(time[1:], (actions[1:] - actions[:-1])/10, "Actions_Hist_diff", 'Actions Change', 'Timestamp', plot_directory, save=True, plt_type="hist")
         elif sys.argv[2] == "boxplot":
