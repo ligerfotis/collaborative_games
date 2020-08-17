@@ -10,7 +10,7 @@ from pygame.locals import *
 from hand_direction.msg import action_agent
 import matplotlib.pyplot as plt
 import numpy as np
-from hyperparams_ur10 import MAX_STEPS, TIME_PER_TURN, ACCEL_RATE_X, ACCEL_RATE_Y, ACCEL_RATE
+from hyperparams_ur10 import MAX_STEPS, TIME_PER_TURN, ACCEL_RATE
 import rospkg
 import random
 
@@ -177,7 +177,7 @@ class Game:
             pygame.display.update()
             self.clock.tick(15)
 
-    def play(self, data=None, total_games=MAX_STEPS, control_mode="accell_dir"):
+    def play(self, data=None, total_games=MAX_STEPS, control_mode="accel_dir"):
         # print(data)
         start_time = time.time()
         if data is None:
@@ -199,7 +199,7 @@ class Game:
         # self.screen.blit(self.update_fps(), (self.width / 2 - 150, 7))
 
         # actions are the acceleration directions
-        if control_mode == "accell_dir":
+        if control_mode == "accel_dir":
             self.accel_x = x_data * accel_rate
             self.accel_y = y_data * accel_rate
         
@@ -210,7 +210,7 @@ class Game:
         elif control_mode == "vel":
             self.vel_x = x_data
             self.vel_y = y_data 
-        elif control_mode == "accell":
+        elif control_mode == "accel":
             self.accel_x = x_data * accel_rate
             self.accel_y = y_data * accel_rate
         

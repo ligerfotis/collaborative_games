@@ -109,14 +109,14 @@ def subplot(plot_directory, turtle_pos, turtle_vel, turtle_acc, time_turtle_pos,
     # axs[3].set_ylim([-1.1, 1.1])
     # axs[3].set_ylim([-8, 9])
     axs[3].set_xlim([min(time_real_act_list), max(time_real_act_list)])
-    if plot_type == "accell":
+    if plot_type == "accel":
         if axis == "x":
             axs[3].set_ylim([-0.1, 0.11])
             plt.yticks(np.arange(-0.1, 0.11, step=0.05))
         elif axis == "y":
             axs[3].set_ylim([-1.1, 1.1])
             plt.yticks(np.arange(-1.1, 1.1, step=0.5))
-    elif plot_type == "accell_dir":
+    elif plot_type == "accel_dir":
         axs[3].set_ylim([-1.1, 1.1])
         plt.yticks(np.arange(-1, 0.1, step=1))
         

@@ -8,7 +8,7 @@ from std_srvs.srv import Empty,EmptyResponse, Trigger
 import time
 from statistics import mean, stdev
 from sac import SAC
-from hyperparams_ur10 import OFF_POLICY_BATCH_SIZE as BATCH_SIZE, DISCOUNT, ENTROPY_WEIGHT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, UPDATE_INTERVAL, UPDATE_START, SAVE_INTERVAL, OFFLINE_UPDATES, TEST_NUM, ACTION_DURATION, CONTROL_MODE
+from hyperparams_ur10 import OFF_POLICY_BATCH_SIZE as BATCH_SIZE, DISCOUNT, ENTROPY_WEIGHT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, UPDATE_INTERVAL, UPDATE_START, SAVE_INTERVAL, OFFLINE_UPDATES, TEST_NUM, ACTION_DURATION, CONTROL_MODE, ACCEL_RATE
 import matplotlib.pyplot as plt
 import numpy as np
 from utils import plot, plot_hist, subplot
@@ -16,18 +16,15 @@ from tqdm import tqdm
 import rospkg
 import os
 from collections import deque
+import csv
 
 
 control_mode = CONTROL_MODE
 
-# path = "/home/fligerakis/catkin_ws/src/hand_direction/plots/"
-rospack = rospkg.RosPack()
-package_path = rospack.get_path("hand_direction")
-
 offline_updates_num = OFFLINE_UPDATES
 test_num = TEST_NUM
 
-action_duration = ACTION_DURATION # 200 milliseconds
+action_duration = ACTION_DURATION
 
 class controller:
 
@@ -42,10 +39,8 @@ class controller:
 		self.act_human_sub = rospy.Subscriber("/rl/action_x", action_msg, self.set_human_action)
 
 		self.turtle_accel_pub = rospy.Publisher("/rl/turtle_accel", Float32, queue_size = 10)
-
 		self.act_agent_pub = rospy.Publisher("/rl/action_y", action_msg, queue_size = 10)
 		self.reset_robot_pub = rospy.Publisher("/robot_reset", Int16, queue_size = 1)
-
 		self.turtle_state_pub = rospy.Publisher("/rl/turtle_pos_X", Int16, queue_size = 10)
 
 		self.transmit_time_list = []
@@ -83,6 +78,8 @@ class controller:
 		self.time_turtle_acc = []
 		self.exec_time = None
 
+		self.iter_num = 0
+
 		self.run_num = 1
 
 		self.turtle_pos_x_dict = {}
@@ -99,6 +96,9 @@ class controller:
 
 		self.agent_act_synthetic_accel = deque(tmp_list) 
 		# print(self.agent_act_synthetic_accel)
+		
+		rospack = rospkg.RosPack()
+		package_path = rospack.get_path("hand_direction")
 
 		self.plot_directory = package_path + "/src/plots/" + control_mode +"/"
 		if not os.path.exists(self.plot_directory):
@@ -162,7 +162,7 @@ class controller:
 				count  = 0
 				while ((time.time() - tmp_time) < action_duration) and self.game.running:
 					count += 1
-					# control mode is "accell" or "vel"
+					# control mode is "accel" or "vel"
 					self.exec_time = self.game.play([act_human, agent_act.item()],control_mode=control_mode)
 					# exec_time = self.game.play([act_human, 0],control_mode=control_mode)
 					
@@ -196,7 +196,6 @@ class controller:
 
 				# run "offline_updates_num" offline gradient updates every "UPDATE_INTERVAL" steps
 				if len(self.agent.D) >= BATCH_SIZE and exp % UPDATE_INTERVAL == 0:
-					
 
 					print(str(offline_updates_num) + " Gradient upadates")
 					self.game.waitScreen("Training... Please Wait.")
@@ -207,6 +206,7 @@ class controller:
 						self.save_rl_data(alpha, policy_loss, value_loss, q_loss, critics_lr, value_critic_lr, actor_lr)
 
 					# # run trials
+					self.reset_lists()
 					score_list =  self.test()
 
 					self.mean_list.append(mean(score_list))
@@ -222,11 +222,9 @@ class controller:
 				
 				# reset game
 				self.resetGame()
-		try:
-			self.save_and_plot_stats_rl()
-		except Exception:
-			print(Exception)
-
+		
+		self.save_and_plot_stats_rl()
+		
 		print("Average Human Action Transmission time per interaction: %f milliseconds(stdev: %f). \n" % (mean(self.transmit_time_list) * 1e3, stdev(self.transmit_time_list) * 1e3))
 		print("Average Execution time per interaction: %f milliseconds(stdev: %f). \n" % (mean(self.interaction_time_list) * 1e3, stdev(self.interaction_time_list) * 1e3))
 		print("Average Execution time per interaction and online update: %f milliseconds(stdev: %f). \n" % (mean(self.interaction_training_time_list) * 1e3, stdev(self.interaction_training_time_list) * 1e3))
@@ -238,6 +236,7 @@ class controller:
 	def test(self):
 
 		score_list = []
+		self.iter_num += 1
 		for game in range(test_num):
 			score = 200
 
@@ -248,13 +247,17 @@ class controller:
 
 				state = self.getState()
 				agent_act = self.agent.next_action(state, stochastic=False) # take only the mean
-				# self.agent_act_list.append(agent_act)
+				act_human = self.action_human
+
+				tmp_time = time.time()
+				self.agent_act_list.append(agent_act)
+				self.human_act_list.append(act_human)
+				self.action_timesteps.append(tmp_time)
 				# print(agent_act)
 				self.publish_agent_action(agent_act)
 
-				tmp_time = time.time()
 				while ((time.time() - tmp_time) < action_duration) and self.game.running:
-					self.exec_time = self.game.play([self.action_human, agent_act.item()], total_games=test_num, control_mode=control_mode)
+					self.exec_time = self.game.play([act_human, agent_act.item()], total_games=test_num, control_mode=control_mode)
 					self.save_stats()
 					self.check_goal_reached()
 
@@ -263,6 +266,7 @@ class controller:
 				
 
 			score_list.append(score)
+			self.save_and_plot_stats_environment("Test_"+ str(self.iter_num) + "_" + str(game))
 
 
 		return score_list
@@ -329,7 +333,7 @@ class controller:
 		np.savetxt(self.plot_directory + 'rl_dynamics/' + 'alpha_values.csv', self.alpha_values, delimiter=',', fmt='%f')
 		np.savetxt(self.plot_directory + 'rl_dynamics/' + 'policy_loss.csv', self.policy_loss_list, delimiter=',', fmt='%f')
 		np.savetxt(self.plot_directory + 'rl_dynamics/' + 'value_loss.csv', self.value_loss_list, delimiter=',', fmt='%f')
-		np.savetxt(self.plot_directory + 'rl_dynamics/' + 'q_loss.csv', self.q_loss, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + 'rl_dynamics/' + 'q_loss.csv', self.q_loss_list, delimiter=',', fmt='%f')
 
 		np.savetxt(self.plot_directory + 'rl_dynamics/' + 'rewards_list.csv', self.rewards_list, delimiter=',', fmt='%f')
 		np.savetxt(self.plot_directory + 'rl_dynamics/' + 'turn_list.csv', self.turn_list, delimiter=',', fmt='%f')
@@ -359,8 +363,11 @@ class controller:
 
 
 	def save_and_plot_stats_environment(self, run_num):
+
 		run_subfolder = "game_" + str(run_num) + "/"
 		os.makedirs(self.plot_directory + run_subfolder + "turtle_dynamics/")
+
+		self.exp_details()
 
 		np.savetxt(self.plot_directory + run_subfolder + "turtle_dynamics/"+ 'agent_act_list.csv', self.agent_act_list, delimiter=',', fmt='%f')
 		np.savetxt(self.plot_directory + run_subfolder + "turtle_dynamics/"+ 'human_act_list.csv', self.human_act_list, delimiter=',', fmt='%f')
@@ -388,6 +395,19 @@ class controller:
 		subplot(self.plot_directory + run_subfolder + "turtle_dynamics/", self.turtle_pos_x, self.turtle_vel_x, self.turtle_acc_x, self.time_turtle_pos, self.time_turtle_vel, self.time_turtle_acc, human_act_list, self.action_timesteps, "x", control_mode)
 		subplot(self.plot_directory + run_subfolder + "turtle_dynamics/", self.turtle_pos_y, self.turtle_vel_y, self.turtle_acc_y, self.time_turtle_pos, self.time_turtle_vel, self.time_turtle_acc, agent_act_list, self.action_timesteps, "y", control_mode)
 		
+		self.reset_lists()
+
+	def publish_agent_action(self, agent_act):
+		h = std_msgs.msg.Header()
+		h.stamp = rospy.Time.now() 
+
+		act = action_msg()
+		act.action = agent_act
+		act.header = h
+		
+		self.act_agent_pub.publish(act)
+
+	def reset_lists(self):
 		self.agent_act_list = []
 		self.human_act_list = []
 		self.action_timesteps = []
@@ -403,94 +423,6 @@ class controller:
 		self.real_act_list = []
 		self.time_real_act_list = []	
 
-		# plot(range(len(self.action_timesteps)), self.agent_act_list, "agent_act_list", 'Agent Actions', 'Timestamp', self.plot_directory, save=True)
-		# plot(range(len(self.action_timesteps)), self.human_act_list, "human_act_list", 'Human Actions', 'Timestamp', self.plot_directory, save=True)		
-
-		
-		# fig, axs = plt.subplots(2)
-		# fig.suptitle('Human Agent Actions Comparison')
-		# fig.tight_layout()
-		# axs[0].set_title('Human Actions')
-		# axs[0].plot(self.real_act_list, self.human_act_list)
-		# axs[0].grid()
-			
-		# axs[1].set_title('Agent Actions')
-		# axs[1].plot(range(len(self.action_timesteps)), self.agent_act_list)
-		# axs[1].grid()
-		# plt.savefig(self.time_turtle_pos_x + "Human_Agent_Actions_Comparison", dpi=150)
-
-		"""
-		"""
-
-		# fig, axs = plt.subplots(4,figsize=(12,7))
-		# fig.tight_layout()
-
-		# plt.sca(axs[0])
-		# plt.yticks(np.arange(0, 800, step=100))
-
-		# axs[0].set_title('Turtle Position X')
-		# axs[0].plot(self.time_turtle_pos, self.turtle_pos_x)
-		# axs[0].grid()
-
-		# plt.sca(axs[1])
-		# plt.yticks(np.arange(-10, 10, step=2.5))
-
-		# axs[1].set_title('Turtle Velocity X')
-		# axs[1].plot(self.time_turtle_vel, self.turtle_vel_x)
-		# axs[1].grid()
-
-		# plt.sca(axs[2])
-		# axs[2].set_ylim([-0.18, 0.19])
-		# plt.yticks(np.arange(-0.18, 0.19, step=0.06))
-		# axs[2].set_title('Turtle Acceleration X')
-		# axs[2].plot(self.time_turtle_acc, self.turtle_acc_x)
-		# axs[2].grid()
-
-		# plt.sca(axs[3])
-		# axs[3].set_ylim([-0.18, 0.19])
-		# plt.yticks(np.arange(-0.18, 0.19, step=0.06))
-		# axs[3].set_title('Human Action')
-		# axs[3].plot(self.time_real_act_list, self.real_act_list)
-		# axs[3].grid()
-		# plt.savefig(self.plot_directory + "Turtle_Human_Comparison_x",dpi=150)
-
-		# """
-		# """
-
-		# fig, axs = plt.subplots(3)
-		# fig.suptitle('Turtle Y Position & Velocity and Agent Action Comparison')
-		# fig.tight_layout()
-		# axs[0].set_title('Turtle Position Y')
-		# axs[0].plot(self.time_turtle_pos, self.turtle_pos_y)
-		# axs[0].grid()
-		# axs[1].set_title('Turtle Velocity Y')
-		# axs[1].plot(self.time_turtle_vel, self.turtle_vel_y)
-		# axs[1].grid()
-		# axs[2].set_title('Turtle Acceleration Y')
-		# axs[2].plot(self.time_turtle_acc, self.turtle_acc_y)
-		# axs[2].grid()
-		# plt.savefig(self.plot_directory + "tutle_pos_vel_acc_y", dpi=150)
-
-		# try:
-		# 	fig = plt.figure()
-		# 	lists = sorted(self.turtle_pos_x_dict.items()) # sorted by key, return a list of tuples
-		# 	plt.grid(True)
-		# 	x, y = zip(*lists) # unpack a list of pairs into two tuples
-		# 	plt.plot(x, y)
-		# 	plt.savefig(self.plot_directory + "turtle_dynamics/" + "position_hist",dpi=150)
-		# except Exception:
-		# 	print(Exception)
-
-	def publish_agent_action(self, agent_act):
-		h = std_msgs.msg.Header()
-		h.stamp = rospy.Time.now() 
-
-		act = action_msg()
-		act.action = agent_act
-		act.header = h
-		
-		self.act_agent_pub.publish(act)
-
 	def save_rl_data(self, alpha, policy_loss, value_loss, q_loss, critics_lr, value_critic_lr, actor_lr):
 		self.alpha_values.append(alpha.item())
 		self.policy_loss_list.append(policy_loss.item())
@@ -500,6 +432,23 @@ class controller:
 		self.critics_lr_list.append(critics_lr)
 		self.value_critic_lr_list.append(value_critic_lr)
 		self.actor_lr_list.append(actor_lr)
+
+	def exp_details(self):
+		exp_details = {}
+		exp_details["interaction_Num"] = MAX_STEPS
+		exp_details["action_type"] = CONTROL_MODE
+		exp_details["action_rate"] = ACCEL_RATE
+		exp_details["action_duration"] = ACTION_DURATION
+
+		csv_file = "exp_details.csv"
+		try:
+			w = csv.writer(open(self.plot_directory+csv_file, "w"))
+			for key, val in exp_details.items():
+				w.writerow([key, val])
+		except IOError:
+			print("I/O error")
+
+
 
 if __name__ == '__main__':
 	rospy.init_node('rl_wrapper', anonymous=True)
