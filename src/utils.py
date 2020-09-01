@@ -27,8 +27,8 @@ def plot(time_elpsd, data, figure_title, y_axis_name, x_axis_name, path, save=Tr
     if variance:
         plt.fill_between(time_elpsd, np.array(data) - np.array(stdev), np.array(data) + np.array(stdev))
     if save:
-        print (path + figure_title)
-        plt.savefig(path + figure_title, dpi=150)
+        print (path + "/" +figure_title)
+        plt.savefig(path + "/" +figure_title, dpi=150)
         # plt.show()
     else:
         plt.show()
@@ -141,6 +141,10 @@ def subplot(plot_directory, turtle_pos, turtle_vel, turtle_acc, time_turtle_pos,
 
     # plt.show()
 
+def regularize_time(timestamps):
+    min_val = min(timestamps)
+    timestamps[:] = [val - min_val for val in timestamps]
+    return timestamps
 
 
 if __name__ == "__main__":
@@ -190,7 +194,7 @@ if __name__ == "__main__":
             os.makedirs(plot_directory)
 
         if sys.argv[2] == "simple":
-            plot(range(len(actions)), actions, "Actions_Simple", 'Actions', 'Timestamp', plot_directory, save=True)
+            plot(time, actions, "Actions_Simple", 'Actions', 'Timestamp', plot_directory, save=True)
         
         elif sys.argv[2] == "simple_diff":
             plot(time[1:], actions[1:] - actions[:-1], "Actions_Simple_diff", 'Actions Change', 'Timestamp', plot_directory, save=True)
@@ -244,17 +248,6 @@ if __name__ == "__main__":
                 real_act_list = np.genfromtxt(plot_directory+"agent_act_list.csv", delimiter=',')  
                 time_real_act_list = np.genfromtxt(plot_directory + "action_timesteps.csv", delimiter=',')
             
-            # div = 4
-            # turtle_pos = turtle_pos[:len(turtle_pos)/div]
-            # turtle_vel = turtle_vel[:len(turtle_vel)/div]
-            # turtle_acc = turtle_acc[:len(turtle_acc)/div]
-            # real_act_list = real_act_list[:len(real_act_list)/div]
-
-            # time_turtle_pos = time_turtle_pos[:len(time_turtle_pos)/div]
-            # time_turtle_vel = time_turtle_vel[:len(time_turtle_vel)/div]
-            # time_turtle_acc = time_turtle_acc[:len(time_turtle_acc)/div]
-            # time_real_act_list = time_real_act_list[:len(time_real_act_list)/div]
-
             subplot(plot_directory, turtle_pos, turtle_vel, turtle_acc, time_turtle_pos, time_turtle_vel, time_turtle_acc, real_act_list, time_real_act_list, axis, plot_type)
 
 
@@ -384,5 +377,22 @@ if __name__ == "__main__":
         plot(range(len(value_critic_lr_list)), value_critic_lr_list, "value_critic_lr_list", 'Value lr', 'Number of Gradient Updates', plot_directory, save=True)
         plot(range(len(actor_lr_list)), actor_lr_list, "actor_lr_list", 'Actor lr', 'Number of Gradient Updates', plot_directory, save=True) 
 
-        plot(range(UPDATE_INTERVAL, MAX_STEPS + UPDATE_INTERVAL, UPDATE_INTERVAL), mean_list, "trials", 'Tests Score', 'Number of Interactions', plot_directory, save=True, variance=True, stdev=stdev_list)     
+        plot(range(len(mean_list)), mean_list, "trials", 'Tests Score', 'Number of Interactions', plot_directory, save=True, variance=True, stdev=stdev_list)     
+
+    elif sys.argv[1] == "plot_agent":
+        path = sys.argv[2] + "/turtle_dynamics"
+
+        try:
+            actions = np.genfromtxt(path + "/agent_act_list.csv", delimiter=',')
+        except Exception:
+            print("agent_act_list.csv NOT found")
+        
+        try:
+            time = np.genfromtxt(path + "/action_timesteps.csv", delimiter=',')
+        except Exception:
+            print("action_timesteps.csv NOT found")
+
+        time = regularize_time(time)
+        plot(time, actions, "Agent_Actions", 'Actions', 'Timestamp', path , save=True, color='-ok', plt_type="simple")
+        # print game
 

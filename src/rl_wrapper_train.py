@@ -8,7 +8,7 @@ from std_srvs.srv import Empty,EmptyResponse, Trigger
 import time
 from statistics import mean, stdev
 from sac import SAC
-from hyperparams_ur10 import OFF_POLICY_BATCH_SIZE as BATCH_SIZE, DISCOUNT, ENTROPY_WEIGHT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, UPDATE_INTERVAL, UPDATE_START, SAVE_INTERVAL, OFFLINE_UPDATES, TEST_NUM, ACTION_DURATION, CONTROL_MODE, ACCEL_RATE
+from hyperparams_ur10 import OFF_POLICY_BATCH_SIZE as BATCH_SIZE, DISCOUNT, ENTROPY_WEIGHT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, UPDATE_INTERVAL, UPDATE_START, SAVE_INTERVAL, OFFLINE_UPDATES, TEST_NUM, ACTION_DURATION, CONTROL_MODE, ACCEL_RATE, REWARD_TYPE
 import matplotlib.pyplot as plt
 import numpy as np
 from utils import plot, plot_hist, subplot
@@ -78,6 +78,7 @@ class controller:
 		self.time_turtle_acc = []
 		self.exec_time = None
 
+		self.interaction_counter = 0
 		self.iter_num = 0
 
 		self.run_num = 1
@@ -137,11 +138,15 @@ class controller:
 		global_time = rospy.get_rostime().to_sec()
 
 		self.resetGame()
+		self.interaction_counter = 0
 
 		for exp in range(MAX_STEPS+1):
+
 			self.check_goal_reached()
 
 			if self.game.running:
+				self.interaction_counter += 1
+
 				start_interaction_time = time.time()
 
 				self.game.experiment = exp
@@ -183,7 +188,7 @@ class controller:
 				self.interaction_time_list.append(time.time() - start_interaction_time)
 
 				# when replay buffer has enough samples update gradient at every turn
-				if len(self.agent.D) >= BATCH_SIZE:
+				if first_update and len(self.agent.D) >= BATCH_SIZE and exp > UPDATE_START:
 
 					if first_update:
 						print("\nStarting updates")
@@ -195,7 +200,7 @@ class controller:
 					self.interaction_training_time_list.append(time.time() - start_interaction_time)
 
 				# run "offline_updates_num" offline gradient updates every "UPDATE_INTERVAL" steps
-				if len(self.agent.D) >= BATCH_SIZE and exp % UPDATE_INTERVAL == 0:
+				elif not first_update and len(self.agent.D) >= BATCH_SIZE and exp % UPDATE_INTERVAL == 0:
 
 					print(str(offline_updates_num) + " Gradient upadates")
 					self.game.waitScreen("Training... Please Wait.")
@@ -241,8 +246,9 @@ class controller:
 			score = 200
 
 			self.resetGame("Testing Model. Trial %d of %d." % (game+1,test_num))
-
+			self.interaction_counter = 0
 			while self.game.running:
+				self.interaction_counter += 1
 				self.game.experiment = "Test: " + str(game+1)
 
 				state = self.getState()
@@ -294,7 +300,10 @@ class controller:
 
 	def getReward(self):
 		if self.game.finished:
-			return 10
+			if self.game.timedOut and REWARD_TYPE=="penalty":
+				return -50
+			else:
+				return 100
 		else:
 			return -1
 
@@ -303,11 +312,12 @@ class controller:
 
 	def check_goal_reached(self, name="turtle"):
 		if name is "turtle":
-			if self.game.time_dependend and self.game.time_elapsed >= self.game.TIME:
+			if self.game.time_dependend and (self.interaction_counter % 200 == 0) and self.interaction_counter != 0:
 				self.game.running = 0
 				self.game.exitcode = 1
 				self.game.timedOut = True
 				self.game.finished = True
+				self.interaction_counter = 0
 
 			# if self.game.width - 40 > self.game.turtle_pos[0] > self.game.width - (80 + 40) \
 			# and 20 < self.game.turtle_pos[1] < (80 + 60 / 2 - 32):
@@ -316,6 +326,7 @@ class controller:
 				self.game.running = 0
 				self.game.exitcode = 1
 				self.game.finished = True  # This means final state achieved
+				self.interaction_counter = 0
 
 
 	def resetGame(self, msg=None):
@@ -323,6 +334,7 @@ class controller:
 		# self.reset_robot_pub.publish(1)
 		self.game.waitScreen(msg1="Put Right Wrist on starting point.", msg2=msg, duration=wait_time)
 		self.game = Game()
+		self.TIME = ACTION_DURATION * 200
 		self.action_human = 0.0
 		self.game.start_time = time.time()
 		self.total_reward_per_game = 0
@@ -435,10 +447,15 @@ class controller:
 
 	def exp_details(self):
 		exp_details = {}
-		exp_details["interaction_Num"] = MAX_STEPS
-		exp_details["action_type"] = CONTROL_MODE
-		exp_details["action_rate"] = ACCEL_RATE
-		exp_details["action_duration"] = ACTION_DURATION
+		exp_details["MAX_STEPS"] = MAX_STEPS
+		exp_details["CONTROL_MODE"] = CONTROL_MODE
+		exp_details["ACCEL_RATE"] = ACCEL_RATE
+		exp_details["ACTION_DURATION"] = ACTION_DURATION
+		exp_details["BATCH_SIZE"] = BATCH_SIZE
+		exp_details["REPLAY_SIZE"] = REPLAY_SIZE
+		exp_details["OFFLINE_UPDATES"] = OFFLINE_UPDATES
+		exp_details["UPDATE_START"] = UPDATE_START
+
 
 		csv_file = "exp_details.csv"
 		try:

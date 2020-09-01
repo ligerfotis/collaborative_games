@@ -1,4 +1,4 @@
-action_duration,0.25
-action_rate,0.006999999999999999
+action_duration,0.3
+action_rate,0.008
 action_type,accel
-interaction_Num,400
+interaction_Num,2000

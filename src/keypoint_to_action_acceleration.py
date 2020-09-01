@@ -25,7 +25,7 @@ class Converter:
 		h.stamp = rospy.Time.now() 
 		
 		pos_x = data.keypoints[0].points.point.x 
-		pos_x = pos_x + 0.28
+		pos_x = pos_x + 0.26
 
 		if 0.20 < pos_x:
 			pos_x = 0.20

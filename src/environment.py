@@ -81,7 +81,8 @@ class Game:
 
         self.vel_y = self.vel_x = 0
 
-        self.timedOut = self.finished = False
+        self.timedOut = False
+        self.finished = False
 
         self.limit1 = self.width / 2
         self.limit2 = self.width / 2 - 100
