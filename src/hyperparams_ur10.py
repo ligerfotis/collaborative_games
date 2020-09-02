@@ -50,4 +50,4 @@ ACCEL_RATE = 0.8 * 1e-2
 # CONTROL_MODE = "accell_dir"
 # CONTROL_MODE = "vel"
 CONTROL_MODE = "accel"
-REWARD_TYPE = "penalty"
+REWARD_TYPE = "penalty" # classic or penalty

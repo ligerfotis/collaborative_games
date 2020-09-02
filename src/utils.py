@@ -384,27 +384,41 @@ if __name__ == "__main__":
         plot(range(len(mean_list)), mean_list, "trials", 'Tests Score', 'Number of Interactions', plot_directory, save=True, variance=True, stdev=stdev_list)     
 
     elif sys.argv[1] == "plot_agent":
-        path = sys.argv[2] + "/turtle_dynamics"
+        path = sys.argv[2] + "/turtle_dynamics/"
+        user = sys.argv[3] # human or agent 
 
         try:
-            actions = np.genfromtxt(path + "/agent_act_list.csv", delimiter=',')
+            print( user + "/_act_list.csv")
+            actions = np.genfromtxt(path + user + "_act_list.csv", delimiter=',')
         except Exception:
             print("agent_act_list.csv NOT found")
         
         try:
-            time = np.genfromtxt(path + "/action_timesteps.csv", delimiter=',')
+            time = np.genfromtxt(path + "action_timesteps.csv", delimiter=',')
         except Exception:
             print("action_timesteps.csv NOT found")
 
         time = regularize_time(time)
-        plot(time, actions, "Agent_Actions", 'Actions', 'Timestamp', path , save=True, color='-ok', plt_type="simple")
+        
+        plt.figure(user + "_Actions", figsize=(25, 10))
+        plt.grid()
+        
+        plt.plot(time[:len(time)/8], actions[:len(time)/8], '-ok')
+        
+        plt.ylabel('Actions')
+        plt.xlabel('Time(seconds)')
+        plt.xticks(np.arange(0, max(time[:len(time)/8]), step=0.2))
+   
+        print (path + user + "_Actions")
+        plt.savefig(path + user + "_Actions", dpi=150)
+        # plot(, , "Agent_Actions", 'Actions', 'Timestamp', path , save=True, color='-ok', plt_type="simple")
         # print game
 
     elif sys.argv[1] == "plot_agent_diff":
         path = sys.argv[2] + "/turtle_dynamics"
 
         try:
-            actions = np.genfromtxt(path + "/agent_act_list.csv", delimiter=',')
+            actions = np.genfromtxt(path + user + "_act_list.csv", delimiter=',')
         except Exception:
             print("agent_act_list.csv NOT found")
         
@@ -417,7 +431,17 @@ if __name__ == "__main__":
 
         diff = actions[:-1] - actions[1:]
 
-        plot(time[:len(time)/8], diff[:len(time)/8], "Agent_Actions_diff", 'Actions', 'Time(seconds)', path , save=True, color='-ok', plt_type="scatter")
+        plt.figure(figure_title)
+        plt.grid()
+    
+
+        plt.ylabel('Actions')
+        plt.xlabel('Time(seconds)')
+   
+        print (path + "/" +figure_title)
+        plt.savefig(path + "/" + "Agent_Actions_diff", dpi=150)
+        # plt.show()
+        # plot(time[:len(time)/8], diff[:len(time)/8], "Agent_Actions_diff", 'Actions', 'Time(seconds)', path , save=True, color='-ok', plt_type="scatter")
         # print game
 
     elif sys.argv[1] == "plot_agent_diff_boxplot":
@@ -456,6 +480,6 @@ if __name__ == "__main__":
         ax.set_xlabel('Games (G)', fontsize=14)
         ax.set_ylabel('Changes in cm', fontsize=14)
         ax.set_xticklabels(name_list, fontsize=18)
-        plt.savefig(path + user+"_action_changes",dpi=150)
+        plt.savefig(path + user + "_action_changes",dpi=150)
         # plt.show()
         # print game

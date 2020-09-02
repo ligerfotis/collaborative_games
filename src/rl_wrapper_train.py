@@ -217,6 +217,8 @@ class controller:
 					pbar = tqdm(xrange(1, offline_updates_num + 1), unit_scale=1, smoothing=0)
 					for _ in pbar:
 						[alpha, policy_loss, value_loss, q_loss, critics_lr, value_critic_lr, actor_lr] = self.agent.train(verbose=False)
+						self.interaction_training_time_list.append(time.time() - start_interaction_time)
+
 						self.save_rl_data(alpha, policy_loss, value_loss, q_loss, critics_lr, value_critic_lr, actor_lr)
 
 					# # run trials
