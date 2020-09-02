@@ -8,7 +8,7 @@ from std_srvs.srv import Empty,EmptyResponse, Trigger
 import time
 from statistics import mean, stdev
 from sac import SAC
-from hyperparams_ur10 import OFF_POLICY_BATCH_SIZE as BATCH_SIZE, DISCOUNT, ENTROPY_WEIGHT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, UPDATE_INTERVAL, UPDATE_START, SAVE_INTERVAL, OFFLINE_UPDATES, TEST_NUM, ACTION_DURATION, CONTROL_MODE, ACCEL_RATE, REWARD_TYPE
+from hyperparams_ur10 import OFF_POLICY_BATCH_SIZE as BATCH_SIZE, DISCOUNT, ENTROPY_WEIGHT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, UPDATE_INTERVAL, UPDATE_START, SAVE_INTERVAL, OFFLINE_UPDATES, TEST_NUM, ACTION_DURATION, CONTROL_MODE, ACCEL_RATE, REWARD_TYPE, INTER_NUM
 import matplotlib.pyplot as plt
 import numpy as np
 from utils import plot, plot_hist, subplot
@@ -137,6 +137,14 @@ class controller:
 		first_update = True
 		global_time = rospy.get_rostime().to_sec()
 
+		# # run trials
+		self.reset_lists()
+		score_list =  self.test()
+
+		self.mean_list.append(mean(score_list))
+		self.stdev_list.append(stdev(score_list))
+		self.trials_list.append(score_list)
+
 		self.resetGame()
 		self.interaction_counter = 0
 
@@ -244,7 +252,7 @@ class controller:
 		score_list = []
 		self.iter_num += 1
 		for game in range(test_num):
-			score = 200
+			score = INTER_NUM
 
 			self.resetGame("Testing Model. Trial %d of %d." % (game+1,test_num))
 			self.interaction_counter = 0
@@ -313,7 +321,7 @@ class controller:
 
 	def check_goal_reached(self, name="turtle"):
 		if name is "turtle":
-			if self.game.time_dependend and (self.interaction_counter % 200 == 0) and self.interaction_counter != 0:
+			if self.game.time_dependend and (self.interaction_counter % INTER_NUM == 0) and self.interaction_counter != 0:
 				self.game.running = 0
 				self.game.exitcode = 1
 				self.game.timedOut = True
@@ -335,7 +343,7 @@ class controller:
 		# self.reset_robot_pub.publish(1)
 		self.game.waitScreen(msg1="Put Right Wrist on starting point.", msg2=msg, duration=wait_time)
 		self.game = Game()
-		self.TIME = ACTION_DURATION * 200
+		self.TIME = ACTION_DURATION * INTER_NUM
 		self.action_human = 0.0
 		self.game.start_time = time.time()
 		self.total_reward_per_game = 0
