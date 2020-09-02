@@ -154,15 +154,12 @@ class controller:
 
 				state = self.getState()
 				agent_act = self.agent.next_action(state)
-				self.agent_act_list.append(agent_act)
 
 				self.turtle_state_pub.publish(state[2])
 				self.publish_agent_action(agent_act)
 
 				tmp_time = time.time()
 				act_human = self.action_human # self.action_human is changing while the loop is running
-				self.human_act_list.append(act_human)
-				self.action_timesteps.append(tmp_time)
 
 				count  = 0
 				while ((time.time() - tmp_time) < action_duration) and self.game.running:
@@ -171,6 +168,10 @@ class controller:
 					self.exec_time = self.game.play([act_human, agent_act.item()],control_mode=control_mode)
 					# exec_time = self.game.play([act_human, 0],control_mode=control_mode)
 					
+					self.agent_act_list.append(agent_act)
+					self.human_act_list.append(act_human)
+					self.action_timesteps.append(tmp_time)
+
 					self.save_stats()
 					self.check_goal_reached()
 					

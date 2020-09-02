@@ -5,6 +5,10 @@ import rospkg
 import sys
 import os
 import math
+from os import listdir, makedirs
+from os.path import isfile, join, exists, isdir
+import re
+import fnmatch
 
 def plot(time_elpsd, data, figure_title, y_axis_name, x_axis_name, path, save=True, variance=False, stdev=None, color='-ok', plt_type="simple"):
     plt.figure(figure_title)
@@ -201,7 +205,7 @@ if __name__ == "__main__":
         
         elif sys.argv[2] == "hist":
             # fps = np.genfromtxt(plot_directory+"fps_list.csv", delimiter=',')
-            plot(None, actions, "fps_list", 'Histogram', 'FPS', plot_directory, save=True, plt_type="hist")
+            plot(None, actions[10:], "fps_list", 'Histogram', 'FPS', plot_directory, save=True, plt_type="hist")
         
         elif sys.argv[2] == "hist_diff":
             plot(time[1:], (actions[1:] - actions[:-1])/10, "Actions_Hist_diff", 'Actions Change', 'Timestamp', plot_directory, save=True, plt_type="hist")
@@ -396,3 +400,62 @@ if __name__ == "__main__":
         plot(time, actions, "Agent_Actions", 'Actions', 'Timestamp', path , save=True, color='-ok', plt_type="simple")
         # print game
 
+    elif sys.argv[1] == "plot_agent_diff":
+        path = sys.argv[2] + "/turtle_dynamics"
+
+        try:
+            actions = np.genfromtxt(path + "/agent_act_list.csv", delimiter=',')
+        except Exception:
+            print("agent_act_list.csv NOT found")
+        
+        try:
+            time = np.genfromtxt(path + "/action_timesteps.csv", delimiter=',')
+        except Exception:
+            print("action_timesteps.csv NOT found")
+
+        time = regularize_time(time)
+
+        diff = actions[:-1] - actions[1:]
+
+        plot(time[:len(time)/8], diff[:len(time)/8], "Agent_Actions_diff", 'Actions', 'Time(seconds)', path , save=True, color='-ok', plt_type="scatter")
+        # print game
+
+    elif sys.argv[1] == "plot_agent_diff_boxplot":
+        path = sys.argv[2] 
+        # max_num = int(sys.argv[3])
+        user = sys.argv[3] # human or agent 
+
+        list_of_files = [f for f in os.listdir(path) if fnmatch.fnmatch(f, 'game_[0-9]*')]
+        max_num = max([int(re.sub("[^0-9]", "", file)) for file in list_of_files])
+        print max_num
+        
+        actions_per_game_list = []
+        name_list = []
+        for game in range(max_num):
+            tmp_path = path + "game_"+ str(game + 1) + "/turtle_dynamics" + "/" + user + "_act_list.csv"
+            name_list.append("G"+ str(game + 1))
+            try:
+                actions = np.genfromtxt(tmp_path, delimiter=',')
+                actions_per_game_list.append(actions)
+            except Exception:
+                print(tmp_path + " NOT found")
+        
+        fig, ax = plt.subplots(figsize=(25, 10))
+        fig.canvas.set_window_title('Title')
+        bp = ax.boxplot(actions_per_game_list)
+        
+        plt.setp(bp['boxes'], color='black')
+        plt.setp(bp['whiskers'], color='black')
+        plt.setp(bp['fliers'], color='red', marker='+')
+        ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey',
+                   alpha=0.5)
+        ax.xaxis.grid()
+        # Hide these grid behind plot objects
+        ax.set_axisbelow(True)
+        ax.set_title(user + ' Action Changes', fontsize=14)
+        ax.set_xlabel('Games (G)', fontsize=14)
+        ax.set_ylabel('Changes in cm', fontsize=14)
+        ax.set_xticklabels(name_list, fontsize=18)
+        plt.savefig(path + user+"_action_changes",dpi=150)
+        # plt.show()
+        # print game
