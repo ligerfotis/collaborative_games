@@ -344,7 +344,7 @@ if __name__ == "__main__":
         plt.xlabel("System Time")
 
         # axs[1].set_title('Turtle Velocity X')
-        axs[2].plot(time_turtle_acc_x, turtle_acc_x, "-ok")
+        axs[2].plot(time_turtle_acc_x, turtle_acc_x, "ok")
         axs[2].grid()
 
         plt.savefig(plot_directory + "human_hand_pos_x_action_" + plot_type,dpi=300)
@@ -403,7 +403,7 @@ if __name__ == "__main__":
         plt.figure(user + "_Actions", figsize=(25, 10))
         plt.grid()
         
-        plt.plot(time[:len(time)/8], actions[:len(time)/8], '-ok')
+        plt.scatter(time[:len(time)/8], actions[:len(time)/8])
         
         plt.ylabel('Actions')
         plt.xlabel('Time(seconds)')
