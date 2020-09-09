@@ -483,3 +483,63 @@ if __name__ == "__main__":
         plt.savefig(path + user + "_action_changes",dpi=150)
         # plt.show()
         # print game
+
+    elif sys.argv[1] == "plot_hist_acts":
+        path = sys.argv[2] 
+        try:
+            agent_act_list_total = np.genfromtxt(path + "agent_act_list_total.csv", delimiter=',')
+        except Exception:
+            print(path + " NOT found")
+        try:
+            human_act_list_total = np.genfromtxt(path + "human_act_list_total.csv", delimiter=',')
+        except Exception:
+            print(path + " NOT found")
+
+        plt.figure()
+        plt.title("Agent Action Histogram")
+        plt.grid()
+        bins = np.linspace(min(agent_act_list_total), max(agent_act_list_total), 40) # fixed number of bins
+        plt.hist(agent_act_list_total, bins=bins, alpha=1)
+        plt.savefig(path + "agent_act_list_total", dpi=150)
+
+        plt.figure()
+        plt.title("Human Action Histogram")
+        plt.grid()
+        bins = np.linspace(min(human_act_list_total), max(human_act_list_total), 40) # fixed number of bins
+        plt.hist(human_act_list_total, bins=bins, alpha=1)
+        plt.savefig(path + "human_act_list_total", dpi=150)
+
+
+        
+    elif sys.argv[1] == "plot_human_act_comparison":   
+        path = sys.argv[2] 
+        real_act_list = np.genfromtxt(path + "real_act_list.csv", delimiter=',')
+        time_real_act_list = np.genfromtxt(path + "time_real_act_list.csv", delimiter=',')
+        used_human_act_time_list = np.genfromtxt(path + "used_human_act_time_list.csv", delimiter=',')
+        used_human_act_list = np.genfromtxt(path + "used_human_act_list.csv", delimiter=',')
+
+        # used_human_act_time_list = regularize_time(used_human_act_time_list)
+        # time_real_act_list = regularize_time(time_real_act_list)
+
+
+        plt.figure("Real_Human_Actions_Comparison", figsize=(25, 10))
+
+        plt.ylabel('Human Actions')
+        plt.xlabel('Msg Timestamp(seconds)')
+        # plt.xticks(np.arange(min(time_real_act_list), max(time_real_act_list), 1e8))
+
+        plt.grid()
+        plt.scatter(time_real_act_list[1:len(time_real_act_list)/8], real_act_list[1:len(real_act_list)/8], color='b', label="real")
+        plt.scatter(used_human_act_time_list[1:len(used_human_act_time_list)/8], used_human_act_list[1:len(used_human_act_list)/8], color='r', label="passed")
+
+        plt.legend()
+        plt.savefig(path + "human_real_action_comparison",dpi=150)
+
+    elif sys.argv[1] == "plot_hist_human_act_delay":   
+        path = sys.argv[2] 
+        human_action_delay_list = np.genfromtxt(path + "human_action_delay_list.csv", delimiter=',')
+        human_action_delay_list_new = [elem for elem in human_action_delay_list if elem <0.8]
+        plot_hist(human_action_delay_list_new, path + 'human_action_delay_list', 'Human Action Delay Histogram')
+
+
+       

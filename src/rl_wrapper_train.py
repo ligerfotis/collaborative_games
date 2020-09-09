@@ -19,6 +19,8 @@ from collections import deque
 import csv
 
 
+use_agent = True
+
 control_mode = CONTROL_MODE
 
 offline_updates_num = OFFLINE_UPDATES
@@ -37,6 +39,7 @@ class controller:
 		self.action_agent = 0.0
 
 		self.act_human_sub = rospy.Subscriber("/rl/action_x", action_msg, self.set_human_action)
+		self.act_human_sub_y = rospy.Subscriber("/rl/action_y", action_msg, self.set_human_action_y)
 
 		self.turtle_accel_pub = rospy.Publisher("/rl/turtle_accel", Float32, queue_size = 10)
 		self.act_agent_pub = rospy.Publisher("/rl/action_y", action_msg, queue_size = 10)
@@ -77,6 +80,16 @@ class controller:
 		self.time_turtle_vel = []
 		self.time_turtle_acc = []
 		self.exec_time = None
+		self.action_human_timestamp = 0
+		self.human_action_delay_list = []
+
+		self.used_human_act_list = []
+		self.used_human_act_time_list = []
+
+		self.action_human_y = 0
+
+		self.human_act_list_total = []
+		self.agent_act_list_total = []
 
 		self.interaction_counter = 0
 		self.iter_num = 0
@@ -127,23 +140,27 @@ class controller:
 	def set_human_action(self,action_human):
 		if action_human.action != 0.0:
 			self.action_human = action_human.action
-			self.time_real_act_list.append(rospy.get_rostime().to_sec())
+			self.action_human_timestamp = action_human.header.stamp.to_sec()
+			self.time_real_act_list.append(self.action_human_timestamp)
 			self.real_act_list.append(self.action_human)
 
 			self.transmit_time_list.append(rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec())
+
+	def set_human_action_y(self,action_human):
+		if action_human.action != 0.0:
+			self.action_human_y = action_human.action
 
 
 	def game_loop(self):
 		first_update = True
 		global_time = rospy.get_rostime().to_sec()
-
 		# # run trials
 		self.reset_lists()
-		score_list =  self.test()
+		# score_list =  self.test()
 
-		self.mean_list.append(mean(score_list))
-		self.stdev_list.append(stdev(score_list))
-		self.trials_list.append(score_list)
+		# self.mean_list.append(mean(score_list))
+		# self.stdev_list.append(stdev(score_list))
+		# self.trials_list.append(score_list)
 
 		self.resetGame()
 		self.interaction_counter = 0
@@ -161,22 +178,30 @@ class controller:
 				self.turns += 1
 
 				state = self.getState()
-				agent_act = self.agent.next_action(state)
+				if use_agent:
+					agent_act = self.agent.next_action(state)
+				else:
+					agent_act = self.action_human_y
 
 				self.turtle_state_pub.publish(state[2])
 				self.publish_agent_action(agent_act)
 
 				tmp_time = time.time()
 				act_human = self.action_human # self.action_human is changing while the loop is running
+				human_act_timestamp = self.action_human_timestamp
+				self.used_human_act_list.append(act_human)
+				self.used_human_act_time_list.append(tmp_time)
 
 				count  = 0
 				while ((time.time() - tmp_time) < action_duration) and self.game.running:
 					count += 1
 					# control mode is "accel" or "vel"
+					
 					self.exec_time = self.game.play([act_human, agent_act.item()],control_mode=control_mode)
+					self.human_action_delay_list.append( time.time() - human_act_timestamp)
 					# exec_time = self.game.play([act_human, 0],control_mode=control_mode)
 					
-					self.agent_act_list.append(agent_act)
+					self.agent_act_list.append(agent_act.item())
 					self.human_act_list.append(act_human)
 					self.action_timesteps.append(tmp_time)
 
@@ -203,10 +228,11 @@ class controller:
 						print("\nStarting updates")
 						first_update = False
 
-					[alpha, policy_loss, value_loss, q_loss, critics_lr, value_critic_lr, actor_lr] = self.agent.train(sample=episode)
-					self.save_rl_data(alpha, policy_loss, value_loss, q_loss, critics_lr, value_critic_lr, actor_lr)
+					if use_agent:
+						[alpha, policy_loss, value_loss, q_loss, critics_lr, value_critic_lr, actor_lr] = self.agent.train(sample=episode)
+						self.save_rl_data(alpha, policy_loss, value_loss, q_loss, critics_lr, value_critic_lr, actor_lr)
 
-					self.interaction_training_time_list.append(time.time() - start_interaction_time)
+						self.interaction_training_time_list.append(time.time() - start_interaction_time)
 
 				# run "offline_updates_num" offline gradient updates every "UPDATE_INTERVAL" steps
 				elif not first_update and len(self.agent.D) >= BATCH_SIZE and exp % UPDATE_INTERVAL == 0:
@@ -216,10 +242,11 @@ class controller:
 
 					pbar = tqdm(xrange(1, offline_updates_num + 1), unit_scale=1, smoothing=0)
 					for _ in pbar:
-						[alpha, policy_loss, value_loss, q_loss, critics_lr, value_critic_lr, actor_lr] = self.agent.train(verbose=False)
-						self.interaction_training_time_list.append(time.time() - start_interaction_time)
+						if use_agent:
+							[alpha, policy_loss, value_loss, q_loss, critics_lr, value_critic_lr, actor_lr] = self.agent.train(verbose=False)
+							self.interaction_training_time_list.append(time.time() - start_interaction_time)
 
-						self.save_rl_data(alpha, policy_loss, value_loss, q_loss, critics_lr, value_critic_lr, actor_lr)
+							self.save_rl_data(alpha, policy_loss, value_loss, q_loss, critics_lr, value_critic_lr, actor_lr)
 
 					# # run trials
 					self.reset_lists()
@@ -243,7 +270,8 @@ class controller:
 		
 		print("Average Human Action Transmission time per interaction: %f milliseconds(stdev: %f). \n" % (mean(self.transmit_time_list) * 1e3, stdev(self.transmit_time_list) * 1e3))
 		print("Average Execution time per interaction: %f milliseconds(stdev: %f). \n" % (mean(self.interaction_time_list) * 1e3, stdev(self.interaction_time_list) * 1e3))
-		print("Average Execution time per interaction and online update: %f milliseconds(stdev: %f). \n" % (mean(self.interaction_training_time_list) * 1e3, stdev(self.interaction_training_time_list) * 1e3))
+		if use_agent:
+			print("Average Execution time per interaction and online update: %f milliseconds(stdev: %f). \n" % (mean(self.interaction_training_time_list) * 1e3, stdev(self.interaction_training_time_list) * 1e3))
 
 		print("Total time of experiments is: %d minutes and %d seconds.\n" % ( ( rospy.get_rostime().to_sec() - global_time )/60, ( rospy.get_rostime().to_sec() - global_time )%60 )  )
 		
@@ -263,11 +291,16 @@ class controller:
 				self.game.experiment = "Test: " + str(game+1)
 
 				state = self.getState()
-				agent_act = self.agent.next_action(state, stochastic=False) # take only the mean
+				
+				if use_agent:
+					agent_act = self.agent.next_action(state, stochastic=False)  # take only the mean
+				else:
+					agent_act = self.action_human_y
+
 				act_human = self.action_human
 
 				tmp_time = time.time()
-				self.agent_act_list.append(agent_act)
+				self.agent_act_list.append(agent_act.item())
 				self.human_act_list.append(act_human)
 				self.action_timesteps.append(tmp_time)
 				# print(agent_act)
@@ -333,7 +366,12 @@ class controller:
 			# if self.game.width - 40 > self.game.turtle_pos[0] > self.game.width - (80 + 40) \
 			# and 20 < self.game.turtle_pos[1] < (80 + 60 / 2 - 32):
 
-			if (self.game.width - 160) <= self.game.turtle_pos[0] <= (self.game.width - 60 - 64) and 40 <= self.game.turtle_pos[1] <= (140 - 64):
+			# if (self.game.width - 160) <= self.game.turtle_pos[0] <= (self.game.width - 60 - 64) and 40 <= self.game.turtle_pos[1] <= (140 - 64):
+			# 	self.game.running = 0
+			# 	self.game.exitcode = 1
+			# 	self.game.finished = True  # This means final state achieved
+			# 	self.interaction_counter = 0
+			if (self.game.width - 160) <= self.game.turtle_pos[0] + 32 <= (self.game.width - 60) and 40 <= self.game.turtle_pos[1] + 32 <= 140:
 				self.game.running = 0
 				self.game.exitcode = 1
 				self.game.finished = True  # This means final state achieved
@@ -367,6 +405,11 @@ class controller:
 		np.savetxt(self.plot_directory + 'rl_dynamics/' + 'actor_lr_list.csv', self.actor_lr_list, delimiter=',', fmt='%f')
 		np.savetxt(self.plot_directory + 'rl_dynamics/' + 'trials_list.csv', self.trials_list, delimiter=',', fmt='%f')
 
+		np.savetxt(self.plot_directory + 'agent_act_list_total.csv', self.agent_act_list_total, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + 'human_act_list_total.csv', self.human_act_list_total, delimiter=',', fmt='%f')	
+
+		np.savetxt(self.plot_directory + 'human_action_delay_list.csv', self.human_action_delay_list, delimiter=',', fmt='%f')	
+
 		np.savetxt(self.plot_directory + 'fps_list.csv', self.fps_list, delimiter=',', fmt='%f')
 		plot_hist(self.fps_list, self.plot_directory, 'fps_list_' + str(self.game.fps))
 		
@@ -382,7 +425,16 @@ class controller:
 		plot(range(len(self.value_critic_lr_list)), self.value_critic_lr_list, "value_critic_lr_list", 'Value lr', 'Number of Gradient Updates', self.plot_directory, save=True)
 		plot(range(len(self.actor_lr_list)), self.actor_lr_list, "actor_lr_list", 'Actor lr', 'Number of Gradient Updates', self.plot_directory, save=True)	
 
-		plot(range(UPDATE_INTERVAL, MAX_STEPS + UPDATE_INTERVAL, UPDATE_INTERVAL), self.mean_list, "trials", 'Tests Score', 'Number of Interactions', self.plot_directory, save=True, variance=True, stdev=self.stdev_list)		
+		try:
+			plot(range(UPDATE_INTERVAL, MAX_STEPS + UPDATE_INTERVAL, UPDATE_INTERVAL), self.mean_list, "trials", 'Tests Score', 'Number of Interactions', self.plot_directory, save=True, variance=True, stdev=self.stdev_list)		
+		except:
+			print("Trials did not ploted")
+
+		plot_hist(self.agent_act_list_total, self.plot_directory + 'agent_act_hist_total', 'Agent Action Histogram')
+		plot_hist(self.human_act_list_total, self.plot_directory + 'human_act_hist_total', 'Human Action Histogram')
+
+		# human_action_delay_list_new = [elem for elem in self.human_action_delay_list if elem <0.8] # remove outliers caused by saving and plotting functions
+		plot_hist(self.human_action_delay_list, self.plot_directory + 'human_action_delay_list', 'Human Action Delay Histogram')
 
 
 	def save_and_plot_stats_environment(self, run_num):
@@ -415,9 +467,22 @@ class controller:
 		np.savetxt(self.plot_directory + run_subfolder + "turtle_dynamics/" + 'real_act_list.csv', self.real_act_list, delimiter=',', fmt='%f')
 		np.savetxt(self.plot_directory + run_subfolder + "turtle_dynamics/" + 'time_real_act_list.csv', self.time_real_act_list, delimiter=',', fmt='%f')
 
+		np.savetxt(self.plot_directory + run_subfolder + "turtle_dynamics/" + 'used_human_act_list.csv', self.used_human_act_list, delimiter=',', fmt='%f')
+		np.savetxt(self.plot_directory + run_subfolder + "turtle_dynamics/" + 'used_human_act_time_list.csv', self.used_human_act_time_list, delimiter=',', fmt='%f')
+
 		subplot(self.plot_directory + run_subfolder + "turtle_dynamics/", self.turtle_pos_x, self.turtle_vel_x, self.turtle_acc_x, self.time_turtle_pos, self.time_turtle_vel, self.time_turtle_acc, human_act_list, self.action_timesteps, "x", control_mode)
 		subplot(self.plot_directory + run_subfolder + "turtle_dynamics/", self.turtle_pos_y, self.turtle_vel_y, self.turtle_acc_y, self.time_turtle_pos, self.time_turtle_vel, self.time_turtle_acc, agent_act_list, self.action_timesteps, "y", control_mode)
 		
+		plt.figure("Real_Human_Actions_Comparison", figsize=(25, 10))
+		plt.grid()
+
+		plt.ylabel('Human Actions')
+		plt.xlabel('Msg Timestamp(seconds)')
+		# plt.xticks(plt.xticks(np.arange(min(min(time_real_act_list),min(self.used_human_act_time_list)), max(max(time_real_act_list),max(used_human_act_time_list)), 1)))
+		plt.scatter(self.time_real_act_list, self.real_act_list)
+		plt.scatter(self.used_human_act_time_list, self.used_human_act_list)
+		plt.savefig(self.plot_directory + run_subfolder + "human_real_action_comparison",dpi=150)
+
 		self.reset_lists()
 
 	def publish_agent_action(self, agent_act):
@@ -431,6 +496,9 @@ class controller:
 		self.act_agent_pub.publish(act)
 
 	def reset_lists(self):
+		self.human_act_list_total.extend(self.human_act_list)
+		self.agent_act_list_total.extend(self.agent_act_list)
+
 		self.agent_act_list = []
 		self.human_act_list = []
 		self.action_timesteps = []
@@ -445,6 +513,9 @@ class controller:
 		self.time_turtle_acc = []
 		self.real_act_list = []
 		self.time_real_act_list = []	
+
+		self.used_human_act_list = []
+		self.used_human_act_time_list = []
 
 	def save_rl_data(self, alpha, policy_loss, value_loss, q_loss, critics_lr, value_critic_lr, actor_lr):
 		self.alpha_values.append(alpha.item())
