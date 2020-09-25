@@ -5,7 +5,7 @@ import std_msgs
 from std_msgs.msg import Int16, Float32
 from environment import Game 
 from keypoint_3d_matching_msgs.msg import Keypoint3d_list
-from hand_direction.msg import observation, action_agent, reward_observation, action_msg
+from collaborative_games.msg import observation, action_agent, reward_observation, action_msg
 from std_srvs.srv import Empty,EmptyResponse, Trigger
 import time
 from statistics import mean 
