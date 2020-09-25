@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import rospy
-from hand_direction.msg import reward, observation, action_agent, action_human, reward_observation
+from collaborative_games.msg import reward, observation, action_agent, action_human, reward_observation
 from getch import getch, pause
 import numpy as np
 from std_msgs.msg import Int16, Float32
