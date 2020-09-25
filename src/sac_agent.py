@@ -3,7 +3,7 @@ import torch
 from tqdm import tqdm
 from hyperparams_ur10 import OFF_POLICY_BATCH_SIZE as BATCH_SIZE, DISCOUNT, ENTROPY_WEIGHT, HIDDEN_SIZE, LEARNING_RATE, MAX_STEPS, POLYAK_FACTOR, REPLAY_SIZE, UPDATE_INTERVAL, UPDATE_START, SAVE_INTERVAL
 from models_ur10_human import Critic, SoftActor, create_target_network, update_target_network
-from hand_direction.msg import reward_observation, action_agent, action_human
+from collaborative_games.msg import reward_observation, action_agent, action_human
 import rospy
 from collections import deque
 import numpy as np
