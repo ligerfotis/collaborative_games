@@ -7,7 +7,7 @@ from math import floor
 import time
 import pygame
 from pygame.locals import *
-from hand_direction.msg import action_agent
+from collaborative_games.msg import action_agent
 import matplotlib.pyplot as plt
 import numpy as np
 from hyperparams_ur10 import MAX_STEPS, TIME_PER_TURN, ACCEL_RATE
@@ -29,9 +29,9 @@ BLACK = (0, 0, 0)
 bright_red = (255, 0, 0)
 bright_green = (0, 255, 0)
 
-# path = "/home/fligerakis/catkin_ws/src/hand_direction/src/"
+# path = "/home/fligerakis/catkin_ws/src/collaborative_games/src/"
 rospack = rospkg.RosPack()
-package_path = rospack.get_path("hand_direction")
+package_path = rospack.get_path("collaborative_games")
 
 def text_objects(text, font):
     textSurface = font.render(text, True, BLACK)
