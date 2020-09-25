@@ -164,7 +164,7 @@ if __name__ == "__main__":
         stdev_list = np.genfromtxt(filename_sdtev, delimiter=',')  
 
         rospack = rospkg.RosPack()
-        package_path = rospack.get_path("hand_direction")
+        package_path = rospack.get_path("collaborative_games")
         plot_directory = package_path + "/src/plots/"
         if not os.path.exists(plot_directory):
             print("Dir %s was not found. Creating it..." %(plot_directory))
@@ -188,7 +188,7 @@ if __name__ == "__main__":
             print("Time argument not given")
 
         rospack = rospkg.RosPack()
-        package_path = rospack.get_path("hand_direction")
+        package_path = rospack.get_path("collaborative_games")
         plot_directory = package_path + "/src/plots/"+ plot_type + "/"
         plot_directory += "Experiment_" + experiment_num + "/"
 
@@ -226,7 +226,7 @@ if __name__ == "__main__":
         axis = sys.argv[3]
 
         rospack = rospkg.RosPack()
-        package_path = rospack.get_path("hand_direction")
+        package_path = rospack.get_path("collaborative_games")
         plot_directory = package_path + "/src/plots/" + plot_type +"/"
         plot_directory += "/Experiment_" + str(exp_num) + run_subfolder + "/turtle_dynamics/"
 
@@ -259,7 +259,7 @@ if __name__ == "__main__":
 
         plot_type = sys.argv[2]
         rospack = rospkg.RosPack()
-        package_path = rospack.get_path("hand_direction")
+        package_path = rospack.get_path("collaborative_games")
         plot_directory = package_path + "/src/plots/" + plot_type + "/"
 
         turtle_pos_x = np.genfromtxt(plot_directory+"x_points_"+plot_type+".csv", delimiter=',')[:1000]
@@ -353,7 +353,7 @@ if __name__ == "__main__":
         plot_type = sys.argv[2]
         exp_num = sys.argv[3]
         rospack = rospkg.RosPack()
-        package_path = rospack.get_path("hand_direction")
+        package_path = rospack.get_path("collaborative_games")
         plot_directory = package_path + "/src/plots/" + plot_type +"/"
         plot_directory += "/Experiment_" + str(exp_num) + '/rl_dynamics/'
 
