@@ -1,23 +1,23 @@
 <?xml version="1.0"?>
 <launch>
 
-	<node pkg="hand_direction" type="rl_wrapper_train.py" respawn="false" name="Environment" output="screen">
+	<node pkg="collaborative_games" type="rl_wrapper_train.py" respawn="false" name="Environment" output="screen">
 	  </node>
 
-	<node pkg="hand_direction" type="keypoint_to_action_acceleration.py" respawn="false" name="Human_Hand" output="screen">
+	<node pkg="collaborative_games" type="keypoint_to_action_acceleration.py" respawn="false" name="Human_Hand" output="screen">
 	</node>
-	<!-- <node pkg="hand_direction" type="keypoint_to_action_direction_acceleration.py" respawn="false" name="Human_Hand" output="screen">
+	<!-- <node pkg="collaborative_games" type="keypoint_to_action_direction_acceleration.py" respawn="false" name="Human_Hand" output="screen">
 	</node> -->
-	<!-- <node pkg="hand_direction" type="keypoint_to_action_position.py" respawn="false" name="Human_Hand" output="screen">
-	</node> -->
-
-	<!-- <node pkg="hand_direction" type="keypress_xy.py" respawn="false" name="Keyboard" output="screen">
+	<!-- <node pkg="collaborative_games" type="keypoint_to_action_position.py" respawn="false" name="Human_Hand" output="screen">
 	</node> -->
 
-	<!-- <node pkg="hand_direction" type="joint_observations.py" respawn="false" name="observations" output="screen">
+	<!-- <node pkg="collaborative_games" type="keypress_xy.py" respawn="false" name="Keyboard" output="screen">
+	</node> -->
+
+	<!-- <node pkg="collaborative_games" type="joint_observations.py" respawn="false" name="observations" output="screen">
 		</node>
  -->
-	<!-- <node pkg="hand_direction" type="ROS_Agent.py" respawn="false" name="Agent" output="screen">
+	<!-- <node pkg="collaborative_games" type="ROS_Agent.py" respawn="false" name="Agent" output="screen">
 	</node> -->
 
 
