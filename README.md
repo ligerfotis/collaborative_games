@@ -1,1 +1,1 @@
-# hand_direction
+# collaborative_games
