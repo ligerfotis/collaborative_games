@@ -3,7 +3,7 @@ import tf
 from trajectory_execution_msgs.msg import PoseTwist
 import geometry_msgs.msg
 import rospy
-from hand_direction.msg import action_msg
+from collaborative_games.msg import action_msg
 
 abs_max_theta = 0.1
 abs_max_phi = 0.1
