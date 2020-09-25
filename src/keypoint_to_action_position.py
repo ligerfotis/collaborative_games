@@ -2,7 +2,7 @@
 import rospy
 from std_msgs.msg import Int16
 from keypoint_3d_matching_msgs.msg import Keypoint3d_list
-from hand_direction.msg import action_msg
+from collaborative_games.msg import action_msg
 import numpy as np
 from std_msgs.msg import Float32, Int16
 import std_msgs
