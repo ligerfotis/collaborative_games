@@ -2,7 +2,7 @@
 import rospy
 from std_msgs.msg import Float32
 # from getch import getch, pause
-from hand_direction.msg import observation, action_agent, reward_observation, action_human, action_msg
+from collaborative_games.msg import observation, action_agent, reward_observation, action_human, action_msg
 import std_msgs
 import sys, os, termios, fcntl
 import time
