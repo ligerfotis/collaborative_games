@@ -3,7 +3,7 @@ import rospy
 import std_msgs
 from std_msgs.msg import Int16, Float32
 from environment import Game 
-from hand_direction.msg import observation, action_agent, reward_observation, action_msg
+from collaborative_games.msg import observation, action_agent, reward_observation, action_msg
 from std_srvs.srv import Empty,EmptyResponse, Trigger
 import time
 from statistics import mean, stdev
@@ -112,7 +112,7 @@ class controller:
 		# print(self.agent_act_synthetic_accel)
 		
 		rospack = rospkg.RosPack()
-		package_path = rospack.get_path("hand_direction")
+		package_path = rospack.get_path("collaborative_games")
 
 		self.plot_directory = package_path + "/src/plots/" + control_mode +"/"
 		if not os.path.exists(self.plot_directory):
