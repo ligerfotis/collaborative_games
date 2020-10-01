@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
 
-	<node pkg="collaborative_games" type="rl_wrapper_train.py" respawn="false" name="Environment" output="screen">
+	<node pkg="collaborative_games" type="game_agent_wrapper.py" respawn="false" name="Game and Agent Wrapper" output="screen">
 	  </node>
 
 	<node pkg="collaborative_games" type="keypoint_to_action_acceleration.py" respawn="false" name="Human_Hand" output="screen">
