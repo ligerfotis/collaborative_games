@@ -32,22 +32,62 @@ class controller:
 
 	def __init__(self):
 		# print("init")
-		self.game = Game()
-		self.agent = SAC()
+		self.game = Game()	# initialize a turtle game instance
+		self.agent = SAC()	# initialize a soft actor critic agent
 
+		"""
+		initialize human & agent actions
+		"""
 		self.action_human = 0.0
 		self.action_agent = 0.0
 
+		"""
+		Create subscribers for human action
+		act_human_sub_y is for the case that the agent's action is not used
+		"""
 		self.act_human_sub = rospy.Subscriber("/rl/action_x", action_msg, self.set_human_action)
 		self.act_human_sub_y = rospy.Subscriber("/rl/action_y", action_msg, self.set_human_action_y)
 
+		"""
+		Create publishers for turtle's acceleration, agent's action, 
+		robot reset signal and turtle's position on x axis
+		"""
 		self.turtle_accel_pub = rospy.Publisher("/rl/turtle_accel", Float32, queue_size = 10)
 		self.act_agent_pub = rospy.Publisher("/rl/action_y", action_msg, queue_size = 10)
 		self.reset_robot_pub = rospy.Publisher("/robot_reset", Int16, queue_size = 1)
 		self.turtle_state_pub = rospy.Publisher("/rl/turtle_pos_X", Int16, queue_size = 10)
-
+		
+		"""
+		Initialize statistics lists
+		"""
 		self.transmit_time_list = []
+		self.agent_act_list = []
+		self.human_act_list = []
+		self.action_timesteps = []
+		self.exec_time_list = []
+		self.act_human_list = []
+		self.real_act_list = []
+		self.time_real_act_list = []
+		self.time_turtle_pos = []
+		self.time_turtle_vel = []
+		self.time_turtle_acc = []
+		self.exec_time = None
+		self.action_human_timestamp = 0
+		self.human_action_delay_list = []
+		self.used_human_act_list = []
+		self.used_human_act_time_list = []
+		self.position_timesteps = []
+		self.fps_list = []
+		self.action_human_y = 0
+		self.human_act_list_total = []
+		self.agent_act_list_total = []
+		self.interaction_counter = 0
+		self.iter_num = 0
+		self.run_num = 1
 
+		"""
+		Initialize RL lists
+		"""
 		self.rewards_list = []
 		self.turn_list = []
 		self.interaction_time_list = []
@@ -62,55 +102,21 @@ class controller:
 		self.value_critic_lr_list = []
 		self.actor_lr_list = []
 		self.trials_list = []
-		self.agent_act_list = []
-		self.human_act_list = []
-		self.action_timesteps = []
+
+		"""
+		Initialize turtle's monitoring lists
+		"""
 		self.turtle_pos_x = []
 		self.turtle_vel_x = []
 		self.turtle_acc_x = []
 		self.turtle_pos_y = []
 		self.turtle_vel_y = []
 		self.turtle_acc_y = []
-		self.position_timesteps = []
-		self.exec_time_list = []
-		self.act_human_list = []
-		self.real_act_list = []
-		self.time_real_act_list = []
-		self.time_turtle_pos = []
-		self.time_turtle_vel = []
-		self.time_turtle_acc = []
-		self.exec_time = None
-		self.action_human_timestamp = 0
-		self.human_action_delay_list = []
-
-		self.used_human_act_list = []
-		self.used_human_act_time_list = []
-
-		self.action_human_y = 0
-
-		self.human_act_list_total = []
-		self.agent_act_list_total = []
-
-		self.interaction_counter = 0
-		self.iter_num = 0
-
-		self.run_num = 1
-
 		self.turtle_pos_x_dict = {}
 
-		self.fps_list = []
-
-		x1 = np.linspace(0, np.pi, 10)
-		x2 = np.linspace(0, -np.pi, 10)		
-		tmp_list = []
-		for _ in range(15):
-			tmp_list = np.concatenate((tmp_list, np.sin(x2)/5.71), axis=None)
-			tmp_list = np.concatenate((tmp_list, np.sin(x1)/5.71), axis=None)
-
-
-		self.agent_act_synthetic_accel = deque(tmp_list) 
-		# print(self.agent_act_synthetic_accel)
-		
+		"""
+		Initialize Paths & Dirs
+		"""
 		rospack = rospkg.RosPack()
 		package_path = rospack.get_path("collaborative_games")
 
@@ -136,40 +142,49 @@ class controller:
 		# 	os.makedirs(self.plot_directory + 'turtle_dynamics/')
 
 		
-
 	def set_human_action(self,action_human):
+		"""
+		Gets the human action from the publisher.
+		"""
 		if action_human.action != 0.0:
 			self.action_human = action_human.action
 			self.action_human_timestamp = action_human.header.stamp.to_sec()
-			self.time_real_act_list.append(self.action_human_timestamp)
+		   	self.time_real_act_list.append(self.action_human_timestamp)
 			self.real_act_list.append(self.action_human)
 
 			self.transmit_time_list.append(rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec())
 
 	def set_human_action_y(self,action_human):
+		"""
+		Gets the human action from the publisher.
+		"""
 		if action_human.action != 0.0:
 			self.action_human_y = action_human.action
 
 
 	def game_loop(self):
+		"""
+		The main loop of the Collaborative Game.
+		This loop contains the training and the testing for the collaborative game experiment		
+		"""
 		first_update = True
 		global_time = rospy.get_rostime().to_sec()
-		# # run trials
+		
+		# Run a testing session before starting training
 		self.reset_lists()
 		# score_list =  self.test()
-
 		# self.mean_list.append(mean(score_list))
 		# self.stdev_list.append(stdev(score_list))
 		# self.trials_list.append(score_list)
 
+		# Run trials
 		self.resetGame()
 		self.interaction_counter = 0
-
 		for exp in range(MAX_STEPS+1):
 
 			self.check_goal_reached()
 
-			if self.game.running:
+			if self.game.running: # checks if the game has not finished yet
 				self.interaction_counter += 1
 
 				start_interaction_time = time.time()
@@ -178,6 +193,8 @@ class controller:
 				self.turns += 1
 
 				state = self.getState()
+
+				# checks if agent or human controls the y axis
 				if use_agent:
 					agent_act = self.agent.next_action(state)
 				else:
@@ -188,15 +205,16 @@ class controller:
 
 				tmp_time = time.time()
 				act_human = self.action_human # self.action_human is changing while the loop is running
+
 				human_act_timestamp = self.action_human_timestamp
 				self.used_human_act_list.append(act_human)
 				self.used_human_act_time_list.append(tmp_time)
 
+				"""This loop ensures that an action will be excexuted for the ACTION_DURATION"""
 				count  = 0
 				while ((time.time() - tmp_time) < action_duration) and self.game.running:
 					count += 1
 					# control mode is "accel" or "vel"
-					
 					self.exec_time = self.game.play([act_human, agent_act.item()],control_mode=control_mode)
 					self.human_action_delay_list.append( time.time() - human_act_timestamp)
 					# exec_time = self.game.play([act_human, 0],control_mode=control_mode)
@@ -209,7 +227,8 @@ class controller:
 					self.check_goal_reached()
 					
 				# print count
-					
+				
+				""" Retrive RL information."""
 				reward = self.getReward()
 				next_state = self.getState()
 				done = self.game.finished
@@ -248,7 +267,7 @@ class controller:
 
 							self.save_rl_data(alpha, policy_loss, value_loss, q_loss, critics_lr, value_critic_lr, actor_lr)
 
-					# # run trials
+					# # run testing trials
 					self.reset_lists()
 					score_list =  self.test()
 
@@ -257,7 +276,7 @@ class controller:
 					self.trials_list.append(score_list)
 
 					self.resetGame()
-			else:
+			else:	#the game has finished
 				self.save_and_plot_stats_environment(self.run_num)
 				self.run_num += 1
 				self.turn_list.append(self.turns)
@@ -278,7 +297,7 @@ class controller:
 		self.game.endGame()
 
 	def test(self):
-
+		""" Performs the testing. The average value of the policy is used as the action and no sampling is being performed."""
 		score_list = []
 		self.iter_num += 1
 		for game in range(test_num):
@@ -322,6 +341,7 @@ class controller:
 		return score_list
 
 	def save_stats(self):
+		"""Saves all the turtle-potition-relevant statistics for later analysis."""
 		self.turtle_accel_pub.publish(self.game.accel_x)
 
 		self.turtle_pos_x.append(self.game.real_turtle_pos[0])
@@ -343,6 +363,7 @@ class controller:
 		self.exec_time_list.append(self.exec_time)
 
 	def getReward(self):
+		"""Calculates the reward for the SAC agent"""
 		if self.game.finished:
 			if self.game.timedOut and REWARD_TYPE=="penalty":
 				return -50
@@ -352,9 +373,11 @@ class controller:
 			return -1
 
 	def getState(self):
+		"""Returns the state of the turtle game."""
 		return [self.game.accel_x, self.game.accel_y, self.game.turtle_pos[0], self.game.turtle_pos[1], self.game.vel_x, self.game.vel_y]
 
 	def check_goal_reached(self, name="turtle"):
+		"""Checks if the goal of the turtle game has been reached."""
 		if name is "turtle":
 			if self.game.time_dependend and (self.interaction_counter % INTER_NUM == 0) and self.interaction_counter != 0:
 				self.game.running = 0
@@ -379,6 +402,7 @@ class controller:
 
 
 	def resetGame(self, msg=None):
+		"""Resets the Turtle Game."""
 		wait_time = 3
 		# self.reset_robot_pub.publish(1)
 		self.game.waitScreen(msg1="Put Right Wrist on starting point.", msg2=msg, duration=wait_time)
@@ -391,6 +415,8 @@ class controller:
 		# self.reset_robot_pub.publish(1)
 
 	def save_and_plot_stats_rl(self):
+		"""Saves & plots all the rl-relevant statistics for later analysis."""
+
 		np.savetxt(self.plot_directory + 'rl_dynamics/' + 'alpha_values.csv', self.alpha_values, delimiter=',', fmt='%f')
 		np.savetxt(self.plot_directory + 'rl_dynamics/' + 'policy_loss.csv', self.policy_loss_list, delimiter=',', fmt='%f')
 		np.savetxt(self.plot_directory + 'rl_dynamics/' + 'value_loss.csv', self.value_loss_list, delimiter=',', fmt='%f')
@@ -438,6 +464,8 @@ class controller:
 
 
 	def save_and_plot_stats_environment(self, run_num):
+		"""Saves all environment-relevant statistics for later analysis."""
+
 
 		run_subfolder = "game_" + str(run_num) + "/"
 		os.makedirs(self.plot_directory + run_subfolder + "turtle_dynamics/")
@@ -486,6 +514,7 @@ class controller:
 		self.reset_lists()
 
 	def publish_agent_action(self, agent_act):
+		"""Publishes Agent's action."""
 		h = std_msgs.msg.Header()
 		h.stamp = rospy.Time.now() 
 
@@ -496,6 +525,7 @@ class controller:
 		self.act_agent_pub.publish(act)
 
 	def reset_lists(self):
+		"""Reseting funstion for the list."""
 		self.human_act_list_total.extend(self.human_act_list)
 		self.agent_act_list_total.extend(self.agent_act_list)
 
@@ -518,6 +548,7 @@ class controller:
 		self.used_human_act_time_list = []
 
 	def save_rl_data(self, alpha, policy_loss, value_loss, q_loss, critics_lr, value_critic_lr, actor_lr):
+		"""RL data saver."""
 		self.alpha_values.append(alpha.item())
 		self.policy_loss_list.append(policy_loss.item())
 		self.value_loss_list.append(value_loss.item())
@@ -528,6 +559,7 @@ class controller:
 		self.actor_lr_list.append(actor_lr)
 
 	def exp_details(self):
+		"""Keeps track of the experiment details & saves them for later reference at the experiment."""
 		exp_details = {}
 		exp_details["MAX_STEPS"] = MAX_STEPS
 		exp_details["CONTROL_MODE"] = CONTROL_MODE
@@ -550,6 +582,7 @@ class controller:
 
 
 if __name__ == '__main__':
+	""" The manin caller of the file."""
 	rospy.init_node('rl_wrapper', anonymous=True)
 	ctrl = controller()
 	ctrl.game.game_intro()

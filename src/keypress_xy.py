@@ -6,12 +6,8 @@ from collaborative_games.msg import observation, action_agent, reward_observatio
 import std_msgs
 import sys, os, termios, fcntl
 import time
-from statistics import mean 
+# from statistics import mean 
 
-# from getch import myGetch
-# # define hotkeys
-# escape = '\x1b'
-# exit = '\x03'
 
 offset = 1
 
@@ -21,13 +17,23 @@ LEFT = 'a'
 RIGHT = 'd'
 # LEFT = 'p'
 # RIGHT = 'o'
+
 class KeyboardPublisher:
 
 	def __init__(self):
 		self.start_time = 0
 		self.total_times = []
+		self.pub_y = rospy.Publisher('/rl/action_y', action_msg, queue_size=10)
+		self.pub_x = rospy.Publisher('/rl/action_x', action_msg, queue_size=10)
 
 	def keyboardPublisher(self, pub_y, pub_x):
+		""" 
+		Publishes an indicative number for each stroke.
+			UP	 -> +1
+			Down -> -1
+			Left -> +2
+			Right-> -2
+		"""
 		key = self.readKeyboard(pub_y, pub_x)
 		if key == UP:
 			return 1.
@@ -41,6 +47,7 @@ class KeyboardPublisher:
 			return 0.
 
 	def readKeyboard(self, pub_y, pub_x):
+		""" Returns the key if it is of interest."""
 		key = self.myGetch(pub_y, pub_x)
 		if key == UP or key == DOWN or key == LEFT or key == RIGHT:
 			return key
@@ -48,6 +55,7 @@ class KeyboardPublisher:
 			rospy.signal_shutdown("Exit Key")
 
 	def myGetch(self, pub_y, pub_x):
+		""" Reads the keystroke from the keyboard."""
 		h = std_msgs.msg.Header()
 		act = action_human()
 
@@ -72,8 +80,8 @@ class KeyboardPublisher:
 				# 	h.stamp = rospy.Time.now() 
 				# 	act.action = 0
 				# 	act.header = h
-				# 	pub_x.publish(act)
-				# 	pub_y.publish(act)
+				# 	self.pub_x.publish(act)
+				# 	self.pub_y.publish(act)
 				# 	counter = 0
 				# counter += 1
 
@@ -88,26 +96,20 @@ class KeyboardPublisher:
 
 
 	def talker(self):
+		action = self.keyboardPublisher(self.pub_y, self.pub_x)
+
 		h = std_msgs.msg.Header()
-		
-
-		pub_y = rospy.Publisher('/rl/action_y', action_msg, queue_size=10)
-		pub_x = rospy.Publisher('/rl/action_x', action_msg, queue_size=10)
-
 		act = action_human()
-
-
-		action = self.keyboardPublisher(pub_y, pub_x)
-
 		h.stamp = rospy.Time.now() 
 		act.header = h
+
 		if action == 1 or action == -1:
 			act.action = action * offset
-			pub_y.publish(act)
+			self.pub_y.publish(act)
 			self.total_times.append(rospy.get_rostime().to_sec()-self.start_time)
 		elif action == 2 or action == -2:
 			act.action = action/2 * offset
-			pub_x.publish(act)
+			self.pub_x.publish(act)
 
 			self.total_times.append(rospy.get_rostime().to_sec()-self.start_time)
 

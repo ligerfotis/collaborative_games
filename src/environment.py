@@ -14,8 +14,6 @@ from hyperparams_ur10 import MAX_STEPS, TIME_PER_TURN, ACCEL_RATE
 import rospkg
 import random
 
-# accel_rate = ACCEL_RATE_X
-# accel_rate = ACCEL_RATE_Y
 accel_rate = ACCEL_RATE
 
 dt=True
@@ -59,14 +57,14 @@ class Game:
         self.screen.set_alpha(None)
 
         self.keys = [False, False, False, False]
-        # random starting position under the barriers
+        # random starting position under the barriers`
         # self.turtle_pos = [random.randint(0, self.width-64), random.randint(700, self.height-64)]
         self.turtle_pos = [5, self.height - 64]
         
         self.reward = 0
         # 3 - Load images
-        self.player = pygame.image.load(package_path + "/src/turtle.png").convert_alpha()
-        self.youwin = pygame.image.load(package_path + "/src/youwin.png").convert_alpha()
+        self.player = pygame.image.load(package_path + "/src/pictures/turtle.png").convert_alpha()
+        self.youwin = pygame.image.load(package_path + "/src/pictures/youwin.png").convert_alpha()
         obst_x, obsty = self.width / 2, self.height / 2
         self.running = 1
         self.exitcode = 0
@@ -113,7 +111,6 @@ class Game:
 
 
     def barriers_obstacle(self):
-
         pygame.draw.line(self.screen, BLACK, [0, self.height / 2], [self.limit2, self.height / 2])
         pygame.draw.line(self.screen, BLACK, [self.limit1, self.height / 2], [self.width, self.height / 2])
 
@@ -179,6 +176,10 @@ class Game:
             self.clock.tick(15)
 
     def play(self, data=None, total_games=MAX_STEPS, control_mode="accel_dir"):
+        """
+        Executes one action (data) and renders the game.
+        """
+
         # print(data)
         start_time = time.time()
         if data is None:
@@ -187,9 +188,9 @@ class Game:
         x_data = data[0]
         y_data = data[1]
 
-        # 5 - clear the screen before drawing it again
+        # clear the screen before drawing it again
         self.screen.fill(backgroundColor)
-        # 6 - draw the screen elements
+        # draw the screen elements
         #pygame.draw.circle(self.screen, RED, (self.width - 80, 80), 60)  # up-right
         
         pygame.draw.rect(self.screen, RED, (self.width - 160, 40, 100, 100 ))
@@ -207,6 +208,7 @@ class Game:
             # print("Action: %f.\n Accel: %f.\nVel: %f." % (data[1], self.accel_y, self.vel_y))
             self.vel_x += self.accel_x
             self.vel_y += self.accel_y
+
         # actions are the commanded velocities
         elif control_mode == "vel":
             self.vel_x = x_data
@@ -240,6 +242,7 @@ class Game:
 
         self.turtle_pos[0] += self.vel_x * self.dt
 
+        # check collision on the y axis
         if 0 <= next_pos_y <= self.height - 64:
             #check collision with barriers
             if 0 <= self.turtle_pos[0] < self.limit2 - 34 or self.limit1 - 34 < self.turtle_pos[0] < self.width:
@@ -253,10 +256,8 @@ class Game:
                         self.vel_y = 0
         else:
             if next_pos_y < 0:
-                # print("here3")
                 self.vel_y = 0
             else:
-                # print("here4")
                 self.vel_y = 0
 
         if self.vel_y > 1:
@@ -272,7 +273,7 @@ class Game:
 
         self.turtle_real_x_pos_list.append(self.real_turtle_pos[0])
         self.turtle_real_y_pos_list.append(self.real_turtle_pos[1])
-        # 6.4 - Draw clock
+        # Draw clock
         font = pygame.font.Font(None, 24)
 
         self.time_elapsed = int(floor(time.time() - self.start_time))
@@ -294,10 +295,10 @@ class Game:
         except pygame.error:
             print("An exception occurred")
 
-        # 7 - update the screen
+        # update the screen
         pygame.display.flip()
 
-        # 8 - loop through the events
+        # loop through the events
         for event in pygame.event.get():
             # check if the event is the X button
             if event.type == pygame.QUIT:
