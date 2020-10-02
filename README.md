@@ -1,7 +1,11 @@
 # Collaborative Games
 ## RoboSKEL, NCSR Demokritos
 
+For Questions, Comments, Clarifications, Suggestions or Discussion:
+
 Fotios Lygerakis (ligerfotis@gmail.com)
+
+-----------------------------------------
 
 The code for this project has been based on this [Github directory](https://github.com/jonastjoms/HumanRobotCollab).
 
