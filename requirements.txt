@@ -66,7 +66,7 @@ pyparsing==2.4.7
 python-dateutil==2.8.1
 python-qt-binding==0.4.3
 pytz==2020.1
-PyYAML==3.12
+PyYAML==5.1
 qt-dotgraph==0.4.2
 qt-gui==0.4.2
 qt-gui-cpp==0.4.2
