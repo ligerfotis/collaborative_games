@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+
+    <node pkg="collaborative_games" type="maze3d_ros_wrapper.py" respawn="false" name="Maze3DEnvironment" output="screen">
+      </node>
+
+
+    <node pkg="collaborative_games" type="keypress_xy.py" respawn="false" name="human" output="screen">
+    </node>
+
+    
+    <!-- <node pkg="hand_direction" type="joint_observations.py" respawn="false" name="observations" output="screen">
+        </node> -->
+<!--    <node pkg="hand_direction" type="ROS_Agent.py" respawn="false" name="Agent" output="screen">
+    </node> -->
+
+
+</launch>

@@ -6,7 +6,7 @@ from collaborative_games.msg import observation, action_agent, reward_observatio
 import std_msgs
 import sys, os, termios, fcntl
 import time
-# from statistics import mean 
+from statistics import mean 
 
 
 offset = 1

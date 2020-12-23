@@ -228,7 +228,7 @@ class controller:
 					
 				# print count
 				
-				""" Retrive RL information."""
+				""" Retrive RLself.information."""
 				reward = self.getReward()
 				next_state = self.getState()
 				done = self.game.finished

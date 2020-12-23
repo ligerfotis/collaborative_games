@@ -10,11 +10,11 @@ project(collaborative_games)
 find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
-  openpose_ros_msgs
-  keypoint_3d_matching_msgs
+  #openpose_ros_msgs
+  #keypoint_3d_matching_msgs
   message_generation
 )
-find_package(/usr/local/lib/OpenPose/OpenPose REQUIRED)
+#find_package(/usr/local/lib/OpenPose/OpenPose REQUIRED)
 
 add_message_files(
   FILES
@@ -33,7 +33,10 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES collaborative_games
-  CATKIN_DEPENDS rospy std_msgs openpose_ros_msgs keypoint_3d_matching_msgs message_runtime
+  CATKIN_DEPENDS rospy std_msgs 
+  #openpose_ros_msgs 
+  #keypoint_3d_matching_msgs 
+  message_runtime
 #  DEPENDS system_lib
 )
 

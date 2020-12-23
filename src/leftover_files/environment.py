@@ -1,4 +1,4 @@
-#!/mnt/34C28480C28447D6/PycharmProjects/maze3d_collaborative/venv/bin python
+#!/mnt/34C28480C28447D6/ros_pyenvs/rosmelodicenv/bin/python
 from __future__ import print_function
 
 import time
@@ -181,7 +181,7 @@ class Game:
         """
 
         # print(data)
-        start_time = time.time()
+        self.start_time = time.time()
         if data is None:
             data = [0, 0]
 
@@ -275,7 +275,6 @@ class Game:
         self.turtle_real_y_pos_list.append(self.real_turtle_pos[1])
         # Draw clock
         font = pygame.font.Font(None, 24)
-
         self.time_elapsed = int(floor(time.time() - self.start_time))
         if self.time_dependend:
             survivedtext = font.render( "Time: " + 
@@ -318,7 +317,7 @@ class Game:
         self.time.append((time.time() - self.global_start_time) * 1e3)
         # self.clock.tick()
         # return time.time() - start_time
-        return time.time() - start_time
+        return time.time() - self.start_time
 
 
     def paused(self):

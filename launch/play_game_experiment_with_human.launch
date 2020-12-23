@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <launch>
 
-	<node pkg="hand_direction" type="rl_wrapper_human2human.py" respawn="false" name="Environment" output="screen">
+	<node pkg="collaborative_games" type="rl_wrapper_human2human.py" respawn="false" name="Environment" output="screen">
 	  </node>
 
 
-	<node pkg="hand_direction" type="keypress_xy.py" respawn="false" name="human" output="screen">
+	<node pkg="collaborative_games" type="keypress_xy.py" respawn="false" name="human" output="screen">
 	</node>
 
 	
