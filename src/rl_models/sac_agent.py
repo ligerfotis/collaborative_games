@@ -16,6 +16,7 @@ class Agent():
                  env=None, gamma=0.99, n_actions=2, max_size=1000000, tau=0.005,
                  update_interval=1, layer1_size=256, layer2_size=256, batch_size=256, reward_scale=2,
                  chkpt_dir='tmp/sac'):
+        print("SAC with continious action space")
         if config is not None:
             # SAC params
             self.batch_size = config['SAC']['batch_size']

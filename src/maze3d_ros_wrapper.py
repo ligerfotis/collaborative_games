@@ -33,8 +33,9 @@ class RL_Maze3D:
     def __init__(self):
         # print("init")
         self.config = get_config()
+        self.second_human = self.config['game']['second_human']
 
-        self.discrete = True
+        self.discrete = self.config['SAC']['discrete']
         # creating environment
         self.maze = Maze3D()
         self.chkpt_dir, self.plot_dir, self.timestamp = get_plot_and_chkpt_dir(self.config['game']['load_checkpoint'],
@@ -51,13 +52,14 @@ class RL_Maze3D:
         initialize human & agent actions
         """
         self.action_human = 0.0
+        self.action_second_human = 0.0
         self.action_agent = 0.0
         """
         Create subscribers for human action
         act_human_sub_y is for the case that the agent's action is not used
         """
         self.act_human_sub = rospy.Subscriber("/rl/action_x", action_msg, self.set_human_action)
-        # self.act_human_sub_y = rospy.Subscriber("/rl/action_y", action_msg, self.set_human_action_y)
+        self.act_human_sub_y = rospy.Subscriber("/rl/action_y", action_msg, self.set_human_action_y)
         """
         Create publishers for turtle's acceleration, agent's action, 
         robot reset signal and turtle's position on x axis
@@ -109,6 +111,12 @@ class RL_Maze3D:
             # self.time_real_act_list.append(self.action_human_timestamp)
             # self.real_act_list.append(self.action_human)
             # self.transmit_time_list.append(rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec())
+    def set_human_action_y(self,action_human):
+        """
+        Gets the human action from the publisher.
+        """
+        if action_human.action != 0.0:
+            self.action_second_human = action_human.action
 
     def main(self):
         # training loop
@@ -129,17 +137,17 @@ class RL_Maze3D:
             save_models = True
             for self.timestep in range(self.max_timesteps + 1):
                 self.total_steps += 1
-
-                if self.discrete:
-                    if i_episode < self.config['Experiment']['start_training_step_on_episode']:  # Pure exploration
-                        agent_action = np.random.randint(0, self.maze.action_space.actions_number)
-                        save_models = False
-                    else:  # Explore with actions_prob
+                if not self.second_human:
+                    if self.discrete:
+                        if i_episode < self.config['Experiment']['start_training_step_on_episode']:  # Pure exploration
+                            agent_action = np.random.randint(0, self.maze.action_space.actions_number)
+                            save_models = False
+                        else:  # Explore with actions_prob
+                            save_models = True
+                            agent_action = self.sac.actor.sample_act(observation)
+                    else:
                         save_models = True
-                        agent_action = self.sac.actor.sample_act(observation)
-                else:
-                    save_models = True
-                    agent_action = self.sac.choose_action(observation)
+                        agent_action = self.sac.choose_action(observation)
                 """
                 Add the human part here
                 """
@@ -166,26 +174,37 @@ class RL_Maze3D:
                 # agent_action = maze.action_space.sample()[0]
                 # human_action = convert_actions(actions)[1]
                 human_action = self.action_human
-                action = [agent_action, human_action]
+                if self.second_human:
+                    action = [self.action_second_human, human_action]
+                else:
+                    action = [agent_action, human_action]
                 self.action_history.append(action)
+                
+                if self.action_human != 0:
+                    self.action_human = 0
+                if self.second_human:
+                    if self.act_human_sub_y != 0:
+                        self.act_human_sub_y = 0
 
                 if self.timestep ==self.max_timesteps:
                     timedout = True
+                
+                observation_, reward, done = self.maze.step(action, timedout, self.config['Experiment']['action_duration'])
 
-                if self.discrete:
-                    observation_, reward, done = self.maze.step(action, timedout, self.config['Experiment']['action_duration'])
-                    self.sac.memory.add(observation, agent_action, reward, observation_, done)
-                else:
-                    observation_, reward, done = self.maze.step(action, timedout, self.config['Experiment']['action_duration'])
-                    self.sac.remember(observation, agent_action, reward, observation_, done)
-
-                if not self.config['game']['test_model']:
+                if not self.second_human:
                     if self.discrete:
-                        self.sac.learn()
-                        self.sac.soft_update_target()
+                        self.sac.memory.add(observation, agent_action, reward, observation_, done)
                     else:
-                        self.sac.learn([observation, agent_action, reward, observation_, done])
-                observation = observation_
+                        # observation_, reward, done = self.maze.step(action, timedout, self.config['Experiment']['action_duration'])
+                        self.sac.remember(observation, agent_action, reward, observation_, done)
+
+                    if not self.config['game']['test_model']:
+                        if self.discrete:
+                            self.sac.learn()
+                            self.sac.soft_update_target()
+                        else:
+                            self.sac.learn([observation, agent_action, reward, observation_, done])
+                    observation = observation_
 
 
                 # ifself.total_steps >= start_training_step andself.total_steps % sac.target_update_interval == 0:
@@ -216,8 +235,8 @@ class RL_Maze3D:
                 self.best_score = avg_score
                 self.best_score_episode = i_episode
                 self.best_score_length =self.timestep
-                if not self.config['game']['test_model'] and save_models:
-                    sac.save_models()
+                if not self.config['game']['test_model'] and save_models and not self.second_human:
+                    self.sac.save_models()
 
             self.length_list.append(self.timestep)
             self.avg_length +=self.timestep
@@ -226,19 +245,20 @@ class RL_Maze3D:
                 start_grad_updates = time.time()
                 update_cycles = self.config['Experiment']['update_cycles']
 
-                # ifself.total_steps >= self.config['Experiment'][
-                #     'start_training_step'] andself.total_steps % sac.update_interval == 0:
-                if i_episode % self.sac.update_interval == 0 and update_cycles > 0:
-                    print("Performing {} updates".format(update_cycles))
-                    for e in tqdm(range(update_cycles)):
-                        if self.discrete:
-                            self.sac.learn()
-                            self.sac.soft_update_target()
-                        else:
-                            self.sac.learn()
+                if not self.second_human:
+                    # ifself.total_steps >= self.config['Experiment'][
+                    #     'start_training_step'] andself.total_steps % sac.update_interval == 0:
+                    if i_episode % self.sac.update_interval == 0 and update_cycles > 0:
+                        print("Performing {} updates".format(update_cycles))
+                        for e in tqdm(range(update_cycles)):
+                            if self.discrete:
+                                self.sac.learn()
+                                self.sac.soft_update_target()
+                            else:
+                                self.sac.learn()
 
-                end_grad_updates = time.time()
-                grad_updates_duration += end_grad_updates - start_grad_updates
+                    end_grad_updates = time.time()
+                    grad_updates_duration += end_grad_updates - start_grad_updates
 
             # logging
             if not self.config['game']['test_model']:

@@ -2,8 +2,10 @@ game:
     test_model: False # no training
     checkpoint_name: "sac_20201216_17-25-51"
     load_checkpoint: False
+    second_human: False
 
 SAC:
+  discrete: True
   layer1_size: 256  # number of variables in hidden layer
   layer2_size: 256
   batch_size: 256
@@ -16,8 +18,8 @@ SAC:
 #  use_custom_reward: True
 
 Experiment:
-  max_episodes: 10  # max training episodes
-  max_timesteps: 10  # max timesteps in one episode
+  max_episodes: 100  # max training episodes
+  max_timesteps: 200  # maxself.timesteps in one episode
   buffer_memory_size: 1000000
 
   action_duration: 0.2 # sec
@@ -30,4 +32,4 @@ Experiment:
   #chkpt_dir = "tmp/sac_fotis"
 
 
-# Commnets: Right Down
+# Commnets: left_down
