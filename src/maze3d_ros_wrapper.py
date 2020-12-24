@@ -31,6 +31,9 @@ import torch
 
 class RL_Maze3D:
     def __init__(self):
+        self.column_names = ["actions_x", "actions_y", "tray_rot_x", "tray_rot_y", "tray_rot_vel_x", "tray_rot_vel_y",
+                "ball_pos_x", "ball_pos_y", "ball_vel_x", "ball_vel_y"]
+        self.df = pd.DataFrame(columns=column_names)
         # print("init")
         self.config = get_config()
         self.second_human = self.config['game']['second_human']
@@ -135,7 +138,7 @@ class RL_Maze3D:
             # actions = [0, 0, 0, 0]  # all keys not pressed
             duration_pause = 0
             save_models = True
-            for self.timestep in range(self.max_timesteps + 1):
+            for self.timestep in range(1, self.max_timesteps + 1):
                 self.total_steps += 1
                 if not self.second_human:
                     if self.discrete:
