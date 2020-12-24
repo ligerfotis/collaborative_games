@@ -6,7 +6,7 @@ left_up = [-104, 73]
 right_down = [73, -104]
 
 #################
-goal = left_down
+goal = left_up
 ################
 
 

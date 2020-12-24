@@ -69,7 +69,8 @@ class Maze3D:
     def get_state(self):
         # [ball pos x | ball pos y | ball vel x | ball vel y|  theta(x) | phi(y) ]
         return np.asarray(
-            [self.board.ball.x, self.board.ball.y, self.board.ball.velocity[0], self.board.ball.velocity[1], self.board.rot_x, self.board.rot_y])
+            [self.board.ball.x, self.board.ball.y, self.board.ball.velocity[0], self.board.ball.velocity[1],
+             self.board.rot_x, self.board.rot_y, self.board.velocity[0], self.board.velocity[1]])
 
     def reset(self):
         self.__init__()
