@@ -5,7 +5,7 @@
       </node>
 
 
-    <node pkg="collaborative_games" type="keypress_xy.py" respawn="false" name="human" output="screen">
+    <node pkg="collaborative_games" type="keyboard.py" respawn="false" name="human_keyboard" output="screen">
     </node>
 
     

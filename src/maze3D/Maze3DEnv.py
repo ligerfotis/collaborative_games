@@ -2,8 +2,9 @@ import time
 
 from maze3D.gameObjects import *
 from maze3D.assets import *
-from maze3D.utils import checkTerminal
+from maze3D.utils import checkTerminal, get_disance_from_goal
 import random
+from rl_models.utils import get_config
 
 layout = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
           [1, 0, 0, 0, 0, 0, 0, 0, 1, 1],
@@ -21,7 +22,7 @@ class ActionSpace:
     def __init__(self):
         # self.actions = list(range(0, 14 + 1))
         # self.shape = 1
-        self.actions = list(range(0, 3))
+        self.actions = [-1, 0, 1]
         self.shape = 2
         self.actions_number = len(self.actions)
         self.high = self.actions[-1]
@@ -29,7 +30,7 @@ class ActionSpace:
 
     def sample(self):
         # return [random.sample([0, 1, 2], 1), random.sample([0, 1, 2], 1)]
-        return np.random.randint(self.low, self.high+1, 2)
+        return [random.choice(self.actions), random.choice(self.actions)]
 
 
 class Maze3D:
@@ -44,6 +45,8 @@ class Maze3D:
         self.observation_shape = (len(self.observation),)
         self.dt = None
         self.fps = 60
+        config = get_config()
+        self.reward_type = config['SAC']['reward_function']
 
     def step(self, action, timedout, action_duration=None):
         tmp_time = time.time()
@@ -77,6 +80,14 @@ class Maze3D:
         return self.observation
 
     def reward_function_maze(self, timedout):
+        if self.reward_type == "Sparse" or self.reward_type == "sparse": 
+            return self.reward_function_sparse(timedout)
+        elif self.reward_type == "Dense" or self.reward_type == "dense": 
+            return self.reward_function_dense(timedout)
+        else:
+            print("Use a valid reward type")
+
+    def reward_function_sparse(self, timedout):
         # For every timestep -1
         # Timed out -50
         # Reach goal +100
@@ -88,3 +99,17 @@ class Maze3D:
             return -50
         # return -1 for each time step
         return -1
+
+    def reward_function_dense(self, timedout):
+        # For every timestep -target_distance
+        # Timed out -50
+        # Reach goal +100
+        if self.done:
+            # solved
+            return 100
+        # if not done and timedout
+        if timedout:
+            return -50
+        # return -target_distance for each time step
+        target_distance = get_disance_from_goal(self.board.ball)
+        return -target_distance/10

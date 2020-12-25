@@ -26,15 +26,20 @@ from rl_models.sac_discrete_agent import DiscreteSACAgent
 from rl_models.utils import get_config, get_plot_and_chkpt_dir, plot_learning_curve, plot
 from maze3D.utils import convert_actions
 import time
-
+import pandas as pd
 import torch 
 
 class RL_Maze3D:
     def __init__(self):
-        self.column_names = ["actions_x", "actions_y", "tray_rot_x", "tray_rot_y", "tray_rot_vel_x", "tray_rot_vel_y",
+        log_column_names = ["actions_x", "actions_y", "tray_rot_x", "tray_rot_y", "tray_rot_vel_x", "tray_rot_vel_y",
                 "ball_pos_x", "ball_pos_y", "ball_vel_x", "ball_vel_y"]
-        self.df = pd.DataFrame(columns=column_names)
-        # print("init")
+        time_column_names_x = ["act_x_created", "transmit_time_act_x"]
+        time_column_names_y = ["act_y_created", "transmit_time_act_y"]
+        
+        self.df_training_logs = pd.DataFrame(columns=log_column_names)
+        self.df_timing_x_logs = pd.DataFrame(columns=time_column_names_x)
+        self.df_timing_y_logs = pd.DataFrame(columns=time_column_names_y)
+
         self.config = get_config()
         self.second_human = self.config['game']['second_human']
 
@@ -54,24 +59,19 @@ class RL_Maze3D:
         """
         initialize human & agent actions
         """
-        self.action_human = 0.0
+        self.human_action = 0.0
         self.action_second_human = 0.0
-        self.action_agent = 0.0
+        self.agent_action = 0.0
         """
         Create subscribers for human action
         act_human_sub_y is for the case that the agent's action is not used
         """
-        self.act_human_sub = rospy.Subscriber("/rl/action_x", action_msg, self.set_human_action)
+        self.act_human_sub = rospy.Subscriber("/rl/action_x", action_msg, self.set_human_action_x)
         self.act_human_sub_y = rospy.Subscriber("/rl/action_y", action_msg, self.set_human_action_y)
         """
         Create publishers for turtle's acceleration, agent's action, 
         robot reset signal and turtle's position on x axis
         """
-        self.turtle_accel_pub = rospy.Publisher("/rl/turtle_accel", Float32, queue_size = 10)
-        self.act_agent_pub = rospy.Publisher("/rl/action_y", action_msg, queue_size = 10)
-        self.reset_robot_pub = rospy.Publisher("/robot_reset", Int16, queue_size = 1)
-        self.turtle_state_pub = rospy.Publisher("/rl/turtle_pos_X", Int16, queue_size = 10)
-
         random_seed = None
         if random_seed:
             torch.manual_seed(random_seed)
@@ -103,23 +103,33 @@ class RL_Maze3D:
         self.flag = True
         self.start_experiment = time.time()
         self.duration_pause_total = 0
+        # self.act_x_time_created_list, self.transmit_time_act_x_list = [], []
+        # self.act_y_time_created_list, self.transmit_time_act_y_list = [], []
         
-    def set_human_action(self,action_human):
+    def set_human_action_x(self,action_human):
         """
         Gets the human action from the publisher.
         """
         if action_human.action != 0.0:
-            self.action_human = -action_human.action
-            # self.action_human_timestamp = action_human.header.stamp.to_sec()
-            # self.time_real_act_list.append(self.action_human_timestamp)
-            # self.real_act_list.append(self.action_human)
-            # self.transmit_time_list.append(rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec())
+            self.human_action = -action_human.action
+
+            act_x_time_created = action_human.header.stamp.to_sec()
+            # self.act_x_time_created_list.append(act_x_time_created)
+            # self.transmit_time_act_x_list.append(rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec())
+            new_row = {'act_x_created': act_x_time_created, 'transmit_time_act_x':rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec()}
+            self.df_timing_x_logs = self.df_timing_x_logs.append(new_row, ignore_index=True)
     def set_human_action_y(self,action_human):
         """
         Gets the human action from the publisher.
         """
         if action_human.action != 0.0:
             self.action_second_human = action_human.action
+
+            act_y_time_created = action_human.header.stamp.to_sec()
+            # self.act_y_time_created_list.append(act_x_time_created)
+            # self.transmit_time_act_y_list.append(rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec())
+            new_row = {'act_y_created': act_y_time_created, 'transmit_time_act_y':rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec()}
+            self.df_timing_y_logs = self.df_timing_y_logs.append(new_row, ignore_index=True)
 
     def main(self):
         # training loop
@@ -143,7 +153,8 @@ class RL_Maze3D:
                 if not self.second_human:
                     if self.discrete:
                         if i_episode < self.config['Experiment']['start_training_step_on_episode']:  # Pure exploration
-                            agent_action = np.random.randint(0, self.maze.action_space.actions_number)
+                            agent_action = self.maze.action_space.sample()[0]
+                            agent_action += 1 # beacause action space is (-1,0,1), but agent is working with (0, 1, 2)
                             save_models = False
                         else:  # Explore with actions_prob
                             save_models = True
@@ -151,6 +162,8 @@ class RL_Maze3D:
                     else:
                         save_models = True
                         agent_action = self.sac.choose_action(observation)
+                # print('agent_action: {}'.format(agent_action))
+                # print("agent action {}".format(agent_action))
                 """
                 Add the human part here
                 """
@@ -176,18 +189,19 @@ class RL_Maze3D:
 
                 # agent_action = maze.action_space.sample()[0]
                 # human_action = convert_actions(actions)[1]
-                human_action = self.action_human
+                # human_action = self.action_human
                 if self.second_human:
-                    action = [self.action_second_human, human_action]
+                    action = [self.action_second_human, self.human_action]
                 else:
-                    action = [agent_action, human_action]
+                    action = [agent_action- 1, self.human_action]
                 self.action_history.append(action)
+                self.action_second_human, self.human_action = [0, 0]
                 
-                if self.action_human != 0:
-                    self.action_human = 0
-                if self.second_human:
-                    if self.act_human_sub_y != 0:
-                        self.act_human_sub_y = 0
+                # if self.action_human != 0:
+                #     self.action_human = 0
+                # if self.second_human:
+                #     if self.act_human_sub_y != 0:
+                #         self.act_human_sub_y = 0
 
                 if self.timestep ==self.max_timesteps:
                     timedout = True
@@ -207,8 +221,13 @@ class RL_Maze3D:
                             self.sac.soft_update_target()
                         else:
                             self.sac.learn([observation, agent_action, reward, observation_, done])
-                    observation = observation_
-
+                observation = observation_
+                new_row = {'actions_x': action[0], 'actions_y': action[1], "ball_pos_x": observation[0],
+                       "ball_pos_y": observation[1], "ball_vel_x": observation[2], "ball_vel_y": observation[3],
+                       "tray_rot_x": observation[4], "tray_rot_y": observation[5], "tray_rot_vel_x": observation[6],
+                       "tray_rot_vel_y": observation[7]}
+                # append row to the dataframe
+                self.df_training_logs = self.df_training_logs.append(new_row, ignore_index=True)
 
                 # ifself.total_steps >= start_training_step andself.total_steps % sac.target_update_interval == 0:
                 #     sac.soft_update_target()
@@ -288,6 +307,10 @@ class RL_Maze3D:
         self.info['fps'] = self.maze.fps
 
         print('Total Experiment time: {}'.format(experiment_duration))
+        #   save logs
+        self.df_training_logs.to_pickle(self.plot_dir + '/training_logs.pkl')
+        self.df_timing_x_logs.to_pickle(self.plot_dir + '/timing_x_logs.pkl')
+        self.df_timing_y_logs.to_pickle(self.plot_dir + '/timing_y_logs.pkl')
 
         if not self.config['game']['test_model']:
             x = [i + 1 for i in range(len(self.score_history))]

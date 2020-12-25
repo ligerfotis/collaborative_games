@@ -14,12 +14,14 @@ SAC:
   alpha: 0.0003
   beta: 0.0003
   target_entropy_ratio: 0.4
+  reward_function: Sparse
+  # reward_function: Dense 
 
 #  use_custom_reward: True
 
 Experiment:
-  max_episodes: 10  # max training episodes
-  max_timesteps: 20  # maxself.timesteps in one episode
+  max_episodes: 100  # max training episodes
+  max_timesteps: 200  # maxself.timesteps in one episode
   buffer_memory_size: 1000000
 
   action_duration: 0.2 # sec
