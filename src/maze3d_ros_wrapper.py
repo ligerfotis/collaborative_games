@@ -28,13 +28,14 @@ from maze3D.utils import convert_actions
 import time
 import pandas as pd
 import torch 
+import math
 
 class RL_Maze3D:
     def __init__(self):
         log_column_names = ["actions_x", "actions_y", "tray_rot_x", "tray_rot_y", "tray_rot_vel_x", "tray_rot_vel_y",
                 "ball_pos_x", "ball_pos_y", "ball_vel_x", "ball_vel_y"]
-        time_column_names_x = ["act_x_created", "transmit_time_act_x"]
-        time_column_names_y = ["act_y_created", "transmit_time_act_y"]
+        time_column_names_x = ["action_x", "act_x_created", "transmit_time_act_x"]
+        time_column_names_y = ["action_x", "act_y_created", "transmit_time_act_y"]
         
         self.df_training_logs = pd.DataFrame(columns=log_column_names)
         self.df_timing_x_logs = pd.DataFrame(columns=time_column_names_x)
@@ -116,7 +117,7 @@ class RL_Maze3D:
             act_x_time_created = action_human.header.stamp.to_sec()
             # self.act_x_time_created_list.append(act_x_time_created)
             # self.transmit_time_act_x_list.append(rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec())
-            new_row = {'act_x_created': act_x_time_created, 'transmit_time_act_x':rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec()}
+            new_row = {'action_x':self.human_action, 'act_x_created': act_x_time_created, 'transmit_time_act_x':rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec()}
             self.df_timing_x_logs = self.df_timing_x_logs.append(new_row, ignore_index=True)
     def set_human_action_y(self,action_human):
         """
@@ -128,7 +129,7 @@ class RL_Maze3D:
             act_y_time_created = action_human.header.stamp.to_sec()
             # self.act_y_time_created_list.append(act_x_time_created)
             # self.transmit_time_act_y_list.append(rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec())
-            new_row = {'act_y_created': act_y_time_created, 'transmit_time_act_y':rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec()}
+            new_row = {'action_y':self.action_second_human, 'act_y_created': act_y_time_created, 'transmit_time_act_y':rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec()}
             self.df_timing_y_logs = self.df_timing_y_logs.append(new_row, ignore_index=True)
 
     def main(self):
@@ -265,12 +266,12 @@ class RL_Maze3D:
             if not self.config['game']['test_model']:
                 # off policy learning
                 start_grad_updates = time.time()
-                update_cycles = self.config['Experiment']['update_cycles']
+                update_cycles = math.ceil(self.config['Experiment']['update_cycles']/self.sac.batch_size)
 
                 if not self.second_human:
                     # ifself.total_steps >= self.config['Experiment'][
                     #     'start_training_step'] andself.total_steps % sac.update_interval == 0:
-                    if i_episode % self.sac.update_interval == 0 and update_cycles > 0:
+                    if i_episode % self.sac.update_interval == 0 and update_cycles > 0 and i_episode:
                         print("Performing {} updates".format(update_cycles))
                         for e in tqdm(range(update_cycles)):
                             if self.discrete:

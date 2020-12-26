@@ -26,12 +26,12 @@ Experiment:
 
   action_duration: 0.2 # sec
   start_training_step_on_episode: 5
-  learn_every_n_episodes: 5
-  update_cycles: 0
+  learn_every_n_episodes: 20
+  update_cycles: 20000
   reward_scale: 2
   # solved_reward = 230  # stop training if avg_reward > solved_reward
   log_interval: 5  # print avg reward in the interval
   #chkpt_dir = "tmp/sac_fotis"
 
 
-# Commnets: left_down
+# Commnets: left_up

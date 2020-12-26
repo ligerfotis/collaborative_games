@@ -2,7 +2,7 @@ import time
 
 from maze3D.gameObjects import *
 from maze3D.assets import *
-from maze3D.utils import checkTerminal, get_disance_from_goal
+from maze3D.utils import checkTerminal, get_distance_from_goal
 import random
 from rl_models.utils import get_config
 
@@ -111,5 +111,5 @@ class Maze3D:
         if timedout:
             return -50
         # return -target_distance for each time step
-        target_distance = get_disance_from_goal(self.board.ball)
+        target_distance = get_distance_from_goal(self.board.ball)
         return -target_distance/10

@@ -7,7 +7,7 @@ left_up = [-104, 73]
 right_down = [73, -104]
 
 #################
-goal = left_down
+goal = left_up
 ################
 
 
@@ -28,7 +28,7 @@ def checkTerminal(ball):
     else:
         return False
 
-def get_disance_from_goal(ball):
+def get_distance_from_goal(ball):
     return math.sqrt(math.pow(ball.x - goal[0],2) + math.pow(ball.y - goal[1],2))
 
 def convert_actions(actions):
