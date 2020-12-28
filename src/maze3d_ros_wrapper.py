@@ -265,13 +265,13 @@ class RL_Maze3D:
             self.avg_length +=self.timestep
             if not self.config['game']['test_model']:
                 # off policy learning
-                start_grad_updates = time.time()
                 update_cycles = math.ceil(self.config['Experiment']['update_cycles']/self.sac.batch_size)
 
                 if not self.second_human:
                     # ifself.total_steps >= self.config['Experiment'][
                     #     'start_training_step'] andself.total_steps % sac.update_interval == 0:
                     if i_episode % self.sac.update_interval == 0 and update_cycles > 0 and i_episode:
+                        start_grad_updates = time.time()
                         print("Performing {} updates".format(update_cycles))
                         for e in tqdm(range(update_cycles)):
                             if self.discrete:
@@ -280,8 +280,8 @@ class RL_Maze3D:
                             else:
                                 self.sac.learn()
 
-                    end_grad_updates = time.time()
-                    grad_updates_duration += end_grad_updates - start_grad_updates
+                        end_grad_updates = time.time()
+                        grad_updates_duration += end_grad_updates - start_grad_updates
 
             # logging
             if not self.config['game']['test_model']:
