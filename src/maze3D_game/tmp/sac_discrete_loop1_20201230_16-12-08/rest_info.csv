@@ -1,0 +1,10 @@
+experiment_duration,0:15:59.590051
+best_score,-0.2
+best_score_episode,31
+best_reward,1
+best_score_length,10
+total_steps,3946
+total_games,100
+fps,60
+avg_grad_updates_duration,0.26398935079574587
+avg_human_act_transmition_time,0.00034332105202151926
