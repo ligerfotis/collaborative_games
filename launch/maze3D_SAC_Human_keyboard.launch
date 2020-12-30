@@ -1,7 +1,8 @@
 <?xml version="1.0"?>
 <launch>
 
-    <node pkg="collaborative_games" type="maze3d_ros_wrapper.py" respawn="false" name="Maze3DEnvironment" output="screen">
+    <node pkg="collaborative_games" type="maze3d_ros_wrapper.py" respawn="false" name="Maze3DEnvironment" output="screen" args="config_sac.yaml">
+
       </node>
 
 

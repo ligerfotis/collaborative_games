@@ -22,8 +22,8 @@ class KeyboardPublisher:
     def __init__(self):
         self.start_time = None
         self.total_times = []
-        self.pub_y = rospy.Publisher('/rl/action_y', action_msg, queue_size=2)
-        self.pub_x = rospy.Publisher('/rl/action_x', action_msg, queue_size=2)
+        self.pub_y = rospy.Publisher('/rl/action_y', action_msg, queue_size=10)
+        self.pub_x = rospy.Publisher('/rl/action_x', action_msg, queue_size=10)
 
     def keyboardPublisher(self):
         key = self.readKeyboard()

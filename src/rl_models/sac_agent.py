@@ -16,7 +16,6 @@ class Agent():
                  env=None, gamma=0.99, n_actions=2, max_size=1000000, tau=0.005,
                  update_interval=1, layer1_size=256, layer2_size=256, batch_size=256, reward_scale=2,
                  chkpt_dir='tmp/sac'):
-        print("SAC with continious action space")
         if config is not None:
             # SAC params
             self.batch_size = config['SAC']['batch_size']
@@ -53,7 +52,7 @@ class Agent():
 
         self.memory = ReplayBuffer(self.buffer_max_size, self.input_dims, self.n_actions)
         self.actor = ActorNetwork(self.alpha, self.input_dims, n_actions=self.n_actions,
-                                  name='actor', max_action=self.env.action_space.high,
+                                  name='actor', max_action=self.env.action_space.high+1,
                                   fc1_dims=self.layer1_size, fc2_dims=self.layer2_size,
                                   chkpt_dir=self.chkpt_dir)
         self.critic_1 = CriticNetwork(self.beta, self.input_dims, n_actions=self.n_actions,

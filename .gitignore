@@ -1,4 +1,4 @@
 src/venv/
 src/tmp/*
 src/plots/*
-srcconfig.yaml
+src/config.yaml

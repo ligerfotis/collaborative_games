@@ -1,359 +1,73 @@
 #!/mnt/34C28480C28447D6/PycharmProjects/maze3d_collaborative/venv/bin/python
+import sys
 import rospkg
 import os
 rospack = rospkg.RosPack()
 package_path = rospack.get_path("collaborative_games")
 os.chdir(package_path + "/src/")
 
+from experiment import Experiment
 import rospy
-import std_msgs
-from std_msgs.msg import Int16, Float32
-# from environment import Game 
-from collaborative_games.msg import observation, action_agent, reward_observation, action_msg
-from std_srvs.srv import Empty,EmptyResponse, Trigger
-import matplotlib.pyplot as plt
-import numpy as np
-from tqdm import tqdm
-import os
-from collections import deque
-import csv
 from datetime import timedelta
 from maze3D.Maze3DEnv import Maze3D
 from maze3D.assets import *
-from maze3D.config import pause
-from rl_models.sac_agent import Agent
-from rl_models.sac_discrete_agent import DiscreteSACAgent
-from rl_models.utils import get_config, get_plot_and_chkpt_dir, plot_learning_curve, plot
-from maze3D.utils import convert_actions
+from rl_models.utils import get_config, get_plot_and_chkpt_dir, get_sac_agent
+from maze3D.utils import convert_actions, save_logs_and_plot
 import time
-import pandas as pd
-import torch 
-import math
 
 class RL_Maze3D:
-    def __init__(self):
-        log_column_names = ["actions_x", "actions_y", "tray_rot_x", "tray_rot_y", "tray_rot_vel_x", "tray_rot_vel_y",
-                "ball_pos_x", "ball_pos_y", "ball_vel_x", "ball_vel_y"]
-        time_column_names_x = ["action_x", "act_x_created", "transmit_time_act_x"]
-        time_column_names_y = ["action_x", "act_y_created", "transmit_time_act_y"]
-        
-        self.df_training_logs = pd.DataFrame(columns=log_column_names)
-        self.df_timing_x_logs = pd.DataFrame(columns=time_column_names_x)
-        self.df_timing_y_logs = pd.DataFrame(columns=time_column_names_y)
-
-        self.config = get_config()
-        self.second_human = self.config['game']['second_human']
-
-        self.discrete = self.config['SAC']['discrete']
+    def __init__(self, argv):
+        # get configuration
+        self.config = get_config(argv[0])
         # creating environment
-        self.maze = Maze3D()
-        self.chkpt_dir, self.plot_dir, self.timestamp = get_plot_and_chkpt_dir(self.config['game']['load_checkpoint'],
-                                                                self.config['game']['checkpoint_name'], self.discrete)
+        self.maze = Maze3D(config_file=argv[0])
 
-        if self.discrete:
-            self.sac = DiscreteSACAgent(config=self.config, env=self.maze, input_dims=self.maze.observation_shape,
-                                   n_actions=self.maze.action_space.actions_number,
-                                   chkpt_dir=self.chkpt_dir)
-        else:
-            self.sac = Agent(config=self.config, env=self.maze, input_dims=self.maze.observation_shape, n_actions=self.maze.action_space.shape,
-                        chkpt_dir=self.chkpt_dir)
-        """
-        initialize human & agent actions
-        """
-        self.human_action = 0.0
-        self.action_second_human = 0.0
-        self.agent_action = 0.0
-        """
-        Create subscribers for human action
-        act_human_sub_y is for the case that the agent's action is not used
-        """
-        self.act_human_sub = rospy.Subscriber("/rl/action_x", action_msg, self.set_human_action_x)
-        self.act_human_sub_y = rospy.Subscriber("/rl/action_y", action_msg, self.set_human_action_y)
-        """
-        Create publishers for turtle's acceleration, agent's action, 
-        robot reset signal and turtle's position on x axis
-        """
-        random_seed = None
-        if random_seed:
-            torch.manual_seed(random_seed)
+        # create the checkpoint and plot directories for this experiment
+        self.chkpt_dir, self.plot_dir, self.timestamp = get_plot_and_chkpt_dir(self.config)
 
-        
-        self.best_score = -100 - 1 * self.config['Experiment']['max_timesteps']
-        self.best_reward = self.best_score
-        self.best_score_episode = -1
-        self.best_score_length = -1
-        # logging variables
-        self.running_reward = 0
-        self.avg_length = 0
-        self.timestep = 1
-        self.total_steps = 0
+        # create the SAC agent
+        self.sac = get_sac_agent(self.config, self.maze, self.chkpt_dir)
 
-        # self.training_epochs_per_update = 128
-        self.action_history = []
-        self.score_history = []
-        self.episode_duration_list = []
-        self.length_list = []
-        self.grad_updates_durations = []
-        self.info = {}
-        if self.config['game']['load_checkpoint']:
-            self.sac.load_models()
-            # env.render(mode='human')
-
-        self.max_episodes = self.config['Experiment']['max_episodes']
-        self.max_timesteps = self.config['Experiment']['max_timesteps']
-        self.flag = True
+        # create the experiment
+        self.experiment = Experiment(self.config, self.maze, self.sac)
         self.start_experiment = time.time()
-        self.duration_pause_total = 0
-        # self.act_x_time_created_list, self.transmit_time_act_x_list = [], []
-        # self.act_y_time_created_list, self.transmit_time_act_y_list = [], []
-        
-    def set_human_action_x(self,action_human):
-        """
-        Gets the human action from the publisher.
-        """
-        if action_human.action != 0.0:
-            self.human_action = -action_human.action
-
-            act_x_time_created = action_human.header.stamp.to_sec()
-            # self.act_x_time_created_list.append(act_x_time_created)
-            # self.transmit_time_act_x_list.append(rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec())
-            new_row = {'action_x':self.human_action, 'act_x_created': act_x_time_created, 'transmit_time_act_x':rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec()}
-            self.df_timing_x_logs = self.df_timing_x_logs.append(new_row, ignore_index=True)
-    def set_human_action_y(self,action_human):
-        """
-        Gets the human action from the publisher.
-        """
-        if action_human.action != 0.0:
-            self.action_second_human = action_human.action
-
-            act_y_time_created = action_human.header.stamp.to_sec()
-            # self.act_y_time_created_list.append(act_x_time_created)
-            # self.transmit_time_act_y_list.append(rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec())
-            new_row = {'action_y':self.action_second_human, 'act_y_created': act_y_time_created, 'transmit_time_act_y':rospy.get_rostime().to_sec()  - action_human.header.stamp.to_sec()}
-            self.df_timing_y_logs = self.df_timing_y_logs.append(new_row, ignore_index=True)
 
     def main(self):
         # training loop
-        for i_episode in range(1, self.max_episodes + 1):
-            observation = self.maze.reset()
-            timedout = False
-            episode_reward = 0
-            start = time.time()
-            grad_updates_duration = 0
-            if i_episode < self.config['Experiment']['start_training_step_on_episode']:  # Pure exploration
-                print("Using Random Agent")
-            else:
-                if self.flag:
-                    print("Using SAC Agent")
-                    self.flag = False
-            # actions = [0, 0, 0, 0]  # all keys not pressed
-            duration_pause = 0
-            save_models = True
-            for self.timestep in range(1, self.max_timesteps + 1):
-                self.total_steps += 1
-                if not self.second_human:
-                    if self.discrete:
-                        if i_episode < self.config['Experiment']['start_training_step_on_episode']:  # Pure exploration
-                            agent_action = self.maze.action_space.sample()[0]
-                            agent_action += 1 # beacause action space is (-1,0,1), but agent is working with (0, 1, 2)
-                            save_models = False
-                        else:  # Explore with actions_prob
-                            save_models = True
-                            agent_action = self.sac.actor.sample_act(observation)
-                    else:
-                        save_models = True
-                        agent_action = self.sac.choose_action(observation)
-                # print('agent_action: {}'.format(agent_action))
-                # print("agent action {}".format(agent_action))
-                """
-                Add the human part here
-                """
-                for event in pg.event.get():
-                    if event.type == pg.QUIT:
-                        return 1
-                    if event.type == pg.KEYDOWN:
-                        if event.key == pg.K_SPACE:
-                            # print("space")
-                            start_pause = time.time()
-                            pause()
-                            end_pause = time.time()
-                            duration_pause += end_pause - start_pause
-                #         if event.key in self.maze.keys:
-                #             actions[self.maze.keys_fotis[event.key]] = 1
-                #             # action_human += maze.keys[event.key]
-                #     if event.type == pg.KEYUP:
-                #         if event.key in self.maze.keys:
-                #             actions[self.maze.keys_fotis[event.key]] = 0
-                #             # action_human -= maze.keys[event.key]
-                # # print(action)
-                # # agent_action, human_action = action
+        loop = self.config['Experiment']['loop']
+        if loop == 1:
+            # Experiment 1
+            self.experiment.loop_1()
+        else:
+            # Experiment 2
+            self.experiment.loop_2()
 
-                # agent_action = maze.action_space.sample()[0]
-                # human_action = convert_actions(actions)[1]
-                # human_action = self.action_human
-                if self.second_human:
-                    action = [self.action_second_human, self.human_action]
-                else:
-                    action = [agent_action- 1, self.human_action]
-                self.action_history.append(action)
-                self.action_second_human, self.human_action = [0, 0]
-                
-                # if self.action_human != 0:
-                #     self.action_human = 0
-                # if self.second_human:
-                #     if self.act_human_sub_y != 0:
-                #         self.act_human_sub_y = 0
-
-                if self.timestep ==self.max_timesteps:
-                    timedout = True
-                
-                observation_, reward, done = self.maze.step(action, timedout, self.config['Experiment']['action_duration'])
-
-                if not self.second_human:
-                    if self.discrete:
-                        self.sac.memory.add(observation, agent_action, reward, observation_, done)
-                    else:
-                        # observation_, reward, done = self.maze.step(action, timedout, self.config['Experiment']['action_duration'])
-                        self.sac.remember(observation, agent_action, reward, observation_, done)
-
-                    if not self.config['game']['test_model']:
-                        if self.discrete:
-                            self.sac.learn()
-                            self.sac.soft_update_target()
-                        else:
-                            self.sac.learn([observation, agent_action, reward, observation_, done])
-                observation = observation_
-                new_row = {'actions_x': action[0], 'actions_y': action[1], "ball_pos_x": observation[0],
-                       "ball_pos_y": observation[1], "ball_vel_x": observation[2], "ball_vel_y": observation[3],
-                       "tray_rot_x": observation[4], "tray_rot_y": observation[5], "tray_rot_vel_x": observation[6],
-                       "tray_rot_vel_y": observation[7]}
-                # append row to the dataframe
-                self.df_training_logs = self.df_training_logs.append(new_row, ignore_index=True)
-
-                # ifself.total_steps >= start_training_step andself.total_steps % sac.target_update_interval == 0:
-                #     sac.soft_update_target()
-
-                self.running_reward += reward
-                episode_reward += reward
-                # if render:
-                #     env.render()
-                if done:
-                    break
-
-            end = time.time()
-            if self.best_reward < episode_reward:
-                self.best_reward = episode_reward
-            self.duration_pause_total += duration_pause
-            episode_duration = end - start - duration_pause
-            self.episode_duration_list.append(episode_duration)
-            self.score_history.append(episode_reward)
-            avg_grad_updates_duration = grad_updates_duration /self.timestep
-            self.grad_updates_durations.append(avg_grad_updates_duration)
-
-            log_interval = self.config['Experiment']['log_interval']
-            avg_ep_duration = np.mean(self.episode_duration_list[-log_interval:])
-            avg_score = np.mean(self.score_history[-log_interval:])
-
-            if avg_score >self.best_score:
-                self.best_score = avg_score
-                self.best_score_episode = i_episode
-                self.best_score_length =self.timestep
-                if not self.config['game']['test_model'] and save_models and not self.second_human:
-                    self.sac.save_models()
-
-            self.length_list.append(self.timestep)
-            self.avg_length +=self.timestep
-            if not self.config['game']['test_model']:
-                # off policy learning
-                update_cycles = math.ceil(self.config['Experiment']['update_cycles']/self.sac.batch_size)
-
-                if not self.second_human:
-                    # ifself.total_steps >= self.config['Experiment'][
-                    #     'start_training_step'] andself.total_steps % sac.update_interval == 0:
-                    if i_episode % self.sac.update_interval == 0 and update_cycles > 0 and i_episode:
-                        start_grad_updates = time.time()
-                        print("Performing {} updates".format(update_cycles))
-                        for e in tqdm(range(update_cycles)):
-                            if self.discrete:
-                                self.sac.learn()
-                                self.sac.soft_update_target()
-                            else:
-                                self.sac.learn()
-
-                        end_grad_updates = time.time()
-                        grad_updates_duration += end_grad_updates - start_grad_updates
-
-            # logging
-            if not self.config['game']['test_model']:
-                if i_episode % log_interval == 0:
-                    self.avg_length = int(self.avg_length / log_interval)
-                    self.running_reward = int((self.running_reward / log_interval))
-
-                    print('Episode {} \t avg length: {} \t Total reward(last {} episodes): {} \t Best Score: {} \t avg '
-                          'episode duration: {} avg grad updates duration: {}'.format(i_episode,self.avg_length, log_interval,
-                                                                                     self.running_reward,self.best_score,
-                                                                                      timedelta(seconds=avg_ep_duration),
-                                                                                      timedelta(
-                                                                                          seconds=avg_grad_updates_duration)))
-                    self.running_reward = 0
-                    self.avg_length = 0
         end_experiment = time.time()
-        experiment_duration = timedelta(seconds=end_experiment -self.start_experiment -self.duration_pause_total)
-        self.info['experiment_duration'] = experiment_duration
-        self.info['best_score'] =self.best_score
-        self.info['best_score_episode'] =self.best_score_episode
-        self.info['best_reward'] =self.best_reward
-        self.info['best_score_length'] =self.best_score_length
-        self.info['total_steps'] = self.total_steps
-        self.info['fps'] = self.maze.fps
+        experiment_duration = timedelta(
+            seconds=end_experiment - self.start_experiment - self.experiment.duration_pause_total)
 
         print('Total Experiment time: {}'.format(experiment_duration))
-        #   save logs
-        self.df_training_logs.to_pickle(self.plot_dir + '/training_logs.pkl')
-        self.df_timing_x_logs.to_pickle(self.plot_dir + '/timing_x_logs.pkl')
-        self.df_timing_y_logs.to_pickle(self.plot_dir + '/timing_y_logs.pkl')
+
+        # save training logs to a pickle file
+        self.experiment.df_training_logs.to_pickle(self.plot_dir + '/training_logs.pkl')
+        self.experiment.df_timing_x_logs.to_pickle(self.plot_dir + '/timing_x_logs.pkl')
+        self.experiment.df_timing_y_logs.to_pickle(self.plot_dir + '/timing_y_logs.pkl')
 
         if not self.config['game']['test_model']:
-            x = [i + 1 for i in range(len(self.score_history))]
-            np.savetxt(self.chkpt_dir + '/scores.csv', np.asarray(self.score_history), delimiter=',')
-
-            actions = np.asarray(self.action_history)
-            # action_main = actions[0].flatten()
-            # action_side = actions[1].flatten()
-            x_actions = [i + 1 for i in range(len(actions))]
-            # Save logs in files
-            np.savetxt(self.chkpt_dir + '/actions.csv', actions, delimiter=',')
-            # np.savetxt('tmp/sac_' + timestamp + '/action_side.csv', action_side, delimiter=',')
-            np.savetxt(self.chkpt_dir + '/epidode_durations.csv', np.asarray(self.episode_duration_list), delimiter=',')
-            np.savetxt(self.chkpt_dir + '/avg_length_list.csv', np.asarray(self.length_list), delimiter=',')
-            w = csv.writer(open(self.chkpt_dir + '/rest_info.csv', "w"))
-            for key, val in self.info.items():
-                w.writerow([key, val])
-            np.savetxt(self.chkpt_dir + '/grad_updates_durations.csv',self.grad_updates_durations, delimiter=',')
-
-            plot_learning_curve(x,self.score_history, self.plot_dir + "/scores.png")
-            # plot_actions(x_actions, action_main, plot_dir + "/action_main.png")
-            # plot_actions(x_actions, action_side, plot_dir + "/action_side.png")
-            plot(self.length_list, self.plot_dir + "/length_list.png", x=[i + 1 for i in range(self.max_episodes)])
-            plot(self.episode_duration_list, self.plot_dir + "/epidode_durations.png", x=[i + 1 for i in range(self.max_episodes)])
-            plot(self.grad_updates_durations, self.plot_dir + "/grad_updates_durations.png", x=[i + 1 for i in range(self.max_episodes)])
-
+            total_games = self.experiment.max_episodes if loop == 1 else self.experiment.game
+            # save rest of the experiment logs and plot them
+            save_logs_and_plot(self.experiment, self.chkpt_dir, self.plot_dir, total_games)
+            self.experiment.save_info(self.chkpt_dir, experiment_duration, total_games)
         pg.quit()
-        return 0
+
 
 if __name__ == '__main__':
     """ The manin caller of the file."""
     rospy.init_node('Maze3D_wrapper', anonymous=True)
-    ctrl = RL_Maze3D()
-    # ctrl.game.game_intro()
-
+    ctrl = RL_Maze3D(sys.argv[1:])
     if not ctrl.main():
         exit(0)
-
-    # while ctrl.game.running:
     try:
         rospy.spin()
     except KeyboardInterrupt:
         print("Shutting down")
-
-
