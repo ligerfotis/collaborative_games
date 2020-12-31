@@ -1,4 +1,4 @@
-src/venv/
-src/tmp/*
-src/plots/*
-src/config.yaml
+src/maze3D_game/venv/
+src/maze3D_game/tmp/*
+src/maze3D_game/plots/*
+# src/maze3D_game/config*

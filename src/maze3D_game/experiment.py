@@ -21,6 +21,7 @@ time_column_names_y = ["action_x", "act_y_created", "transmit_time_act_y"]
 
 class Experiment:
     def __init__(self, config, environment, agent):
+        self.test = 0
         self.config = config
         self.env = environment
         self.agent = agent
@@ -34,6 +35,9 @@ class Experiment:
         self.episode_duration_list = []
         self.length_list = []
         self.grad_updates_durations = []
+        self.test_length_list = []
+        self.test_score_history = []
+        self.test_episode_duration_list = []
         self.discrete = config['SAC']['discrete']
         self.second_human = config['game']['second_human']
         self.duration_pause_total = 0
@@ -63,8 +67,10 @@ class Experiment:
         self.df_training_logs = pd.DataFrame(columns=log_column_names)
         self.df_timing_x_logs = pd.DataFrame(columns=time_column_names_x)
         self.df_timing_y_logs = pd.DataFrame(columns=time_column_names_y)
-
+        self.df_test = pd.DataFrame(columns=log_column_names)
         self.human_act_transmition_time_list = []
+        self.test_max_timesteps = self.config['Experiment']['test_loop']['max_timesteps']
+        self.test_max_episodes = self.config['Experiment']['test_loop']['max_games']
 
     def set_human_action_x(self,action_human):
         """
@@ -175,8 +181,11 @@ class Experiment:
 
             # off policy learning
             if not self.config['game']['test_model']:
-                grad_updates_duration = self.grad_updates()
-                self.grad_updates_durations.append(grad_updates_duration)
+                update_cycles = math.ceil(
+                    self.config['Experiment']['loop_1']['update_cycles'] / self.agent.batch_size)
+                if i_episode % self.agent.update_interval == 0 and update_cycles > 0:
+                    grad_updates_duration = self.grad_updates(update_cycles)
+                    self.grad_updates_durations.append(grad_updates_duration)
 
             # logging
             if not self.config['game']['test_model']:
@@ -242,10 +251,13 @@ class Experiment:
             # if total_steps >= start_training_step and total_steps % sac.target_update_interval == 0:
             #     sac.soft_update_target()
 
-            # off policy learning
+             # off policy learning
             if not self.config['game']['test_model']:
-                grad_updates_duration = self.grad_updates()
-                self.grad_updates_durations.append(grad_updates_duration)
+                update_cycles = math.ceil(
+                    self.config['Experiment']['loop_2']['update_cycles'] / self.agent.batch_size)
+                if self.total_steps % self.agent.update_interval == 0 and update_cycles > 0:
+                    grad_updates_duration = self.grad_updates(update_cycles)
+                    self.grad_updates_durations.append(grad_updates_duration)
 
             running_reward += reward
             episode_reward += reward
@@ -348,21 +360,22 @@ class Experiment:
             if not self.config['game']['test_model'] and self.save_models and not self.second_human:
                 self.agent.save_models()
 
-    def grad_updates(self):
+    def grad_updates(self, update_cycles=None):
         start_grad_updates = time.time()
-        update_cycles = math.ceil(
-            self.config['Experiment']['loop_2']['update_cycles'] / self.agent.batch_size)
+        end_grad_updates = 0
         if not self.second_human:
-            if self.total_steps % self.agent.update_interval == 0 and update_cycles > 0:
-                print("Performing {} updates".format(update_cycles))
-                for _ in tqdm(range(update_cycles)):
-                    if self.discrete:
-                        self.agent.learn()
-                        self.agent.soft_update_target()
-                    else:
-                        self.agent.learn()
+            print("Performing {} updates".format(update_cycles))
+            for _ in tqdm(range(update_cycles)):
+                if self.discrete:
+                    self.agent.learn()
+                    self.agent.soft_update_target()
+                else:
+                    self.agent.learn()
+            end_grad_updates = time.time()
+            # Testing
+            self.test_agent()
+            print("Continue Training.")
 
-        end_grad_updates = time.time()
         return end_grad_updates - start_grad_updates
 
     def print_logs(self, game, running_reward, avg_length, log_interval, avg_ep_duration):
@@ -381,9 +394,10 @@ class Experiment:
             avg_length = 0
         return running_reward, avg_length
 
-    def compute_agent_action(self, observation, randomness_critirion, randomness_threshold, flag):
+    def compute_agent_action(self, observation, randomness_critirion=None, randomness_threshold=None, flag=True):
         if self.discrete:
-            if randomness_critirion < randomness_threshold:
+            if randomness_critirion is not None and randomness_threshold is not None \
+                    and randomness_critirion < randomness_threshold:
                 # Pure exploration
                 self.agent_action = np.random.randint(self.env.action_space.actions_number)
                 self.save_models = False
@@ -400,3 +414,62 @@ class Experiment:
             self.save_models = True
             self.agent_action = self.agent.choose_action(observation)
         return flag
+
+    def test_agent(self):
+        # test loop
+        current_timestep = 0
+        self.test += 1
+        print('Test {}'.format(self.test))
+        for game in range(1, self.test_max_episodes + 1):
+            observation = self.env.reset()
+            timedout = False
+            episode_reward = 0
+            start = time.time()
+
+            actions = [0, 0, 0, 0]  # all keys not pressed
+            duration_pause = 0
+            self.save_models = True
+            for timestep in range(1, self.test_max_timesteps + 1):
+                self.total_steps += 1
+                current_timestep += 1
+
+                # compute agent's action
+                self.compute_agent_action(observation)
+                # compute keyboard action
+                duration_pause = self.getKeyboard(actions, duration_pause)
+                # get final action pair
+                action = self.get_action_pair()
+
+                if timestep == self.max_timesteps:
+                    timedout = True
+
+                # Environment step
+                observation_, reward, done = self.env.step(action, timedout,
+                                                           self.config['Experiment']['test_loop']['action_duration'])
+
+                observation = observation_
+                new_row = {'actions_x': action[0], 'actions_y': action[1], "ball_pos_x": observation[0],
+                           "ball_pos_y": observation[1], "ball_vel_x": observation[2], "ball_vel_y": observation[3],
+                           "tray_rot_x": observation[4], "tray_rot_y": observation[5], "tray_rot_vel_x": observation[6],
+                           "tray_rot_vel_y": observation[7]}
+                # append row to the dataframe
+                self.df_test = self.df_test.append(new_row, ignore_index=True)
+
+                episode_reward += reward
+
+                if done:
+                    break
+
+            end = time.time()
+
+            self.duration_pause_total += duration_pause
+            episode_duration = end - start - duration_pause
+
+            self.test_episode_duration_list.append(episode_duration)
+            self.test_score_history.append(self.config['Experiment']['test_loop']['max_score'] + episode_reward)
+            self.test_length_list.append(current_timestep)
+
+            # logging
+            # self.test_print_logs(game, episode_reward, current_timestep, episode_duration)
+
+            current_timestep = 0
