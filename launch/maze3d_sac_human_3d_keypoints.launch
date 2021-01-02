@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+
+    <node pkg="collaborative_games" type="maze3d_ros_wrapper.py" respawn="false" name="Maze3DEnvironment" output="screen" args="config_sac.yaml">
+      </node>
+
+    <node pkg="collaborative_games" type="keypoint_to_discrete_action.py" respawn="false" name="human_3d_keypoints" output="screen">
+    </node>
+
+<!--    <node pkg="collaborative_games" type="keyboard.py" respawn="false" name="human_keyboard" output="screen">-->
+<!--    </node>-->
+
+
+</launch>

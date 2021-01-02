@@ -24,7 +24,7 @@ Reinforcement Learning (RL) Agent: Soft Actor Critic (SAC)
     * Note: Discrete SAC is only compatible with the game so far
   
 
-* In the `maze3D_SAC_Human_keyboard.launch` choose config file:
+* In the `maze3d_sac_human_keyboard.launch` choose config file:
     * Human - SAC agent: `args="config_sac.yaml"`
     * Human - Human: `args="config_human.yaml"`
   

@@ -10,6 +10,12 @@ Fotios Lygerakis (ligerfotis@gmail.com)
 
 The purpose of this project is to study human robot collaboration in shared tasks
 
+### Directories in `src`
+* `human_action`: files for reading input from keyboard or [RoboSKEL's Openpose 3D package](https://github.com/ThanasisTs/openpose_utils)
+* `maze3D_game`: 3D Ball Maze Game
+* `turtle_game`: 2D turtle figure Maze Game
+
+
 ### Prerequisites
 * ROS melodic installation
   

@@ -1,0 +1,7 @@
+topic_to_listen_to: "/transform_topic"
+start_keypoint: 0.25 # in meters from the axis starting point
+offset: 0.1 # meters
+
+# offset/2 should be > than 1' or 2.5 cm which is the error of openpose
+
+
