@@ -22,7 +22,8 @@ class HumanAction:
         self.config = get_config("../../maze3D_game/" + config)
         topic_to_listen_to = self.config['topic_to_listen_to']
         self.keypoint_sub = rospy.Subscriber(topic_to_listen_to, Keypoint3d_list, self.callback)
-        self.action_human_pub = rospy.Publisher('/rl/action_x', action_msg, queue_size=1)
+        topic_to_publish_on = self.config['topic_to_publish_on']
+        self.action_human_pub = rospy.Publisher(topic_to_publish_on, action_msg, queue_size=1)
         self.prev_x = None
         self.start_time = None
 

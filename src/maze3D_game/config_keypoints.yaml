@@ -1,4 +1,6 @@
 topic_to_listen_to: "/transform_topic"
+topic_to_publish_on: "/rl/action_x"
+
 start_keypoint: 0.25 # in meters from the axis starting point
 offset: 0.1 # meters
 
