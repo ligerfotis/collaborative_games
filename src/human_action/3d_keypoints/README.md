@@ -11,6 +11,7 @@ This [3D keypoint extractor](https://github.com/ThanasisTs/openpose_utils) is be
 * Configuration file: `collaborative_games/src/maze_3D_game/config_keypoints.yaml`
 
 * Listens to `<topic_to_listen_to>` topic of the transformed 3D keypoint in the config file above.
+* Publishes on `<topic_to_publish_on>` topic in the config file above.
 
 * Number of actions: 3
     * Left:-1
